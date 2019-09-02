@@ -1,0 +1,26 @@
+host code.aliyun.com
+n:
+*.pyc
+*.py[cod]
+*.egg
+*.egg-info
+*.swp
+*.bak
+*.zip
+dist
+build
+.___pycache__
+__MACOSX
+
+
+# My configurations:
+db.ini
+deploy_key_rsa
+*.ini
+*.pb
+*.h5
+# out file
+*.log
+log
+.out
+nohup.out
