@@ -38,10 +38,7 @@ basemodel = Model(inputs=input, outputs=y_pred)
 '''
 encode_dct =  {}
 
-if LAN == 'jap':
-    char_set = open('./char_rec/densenet_jp/japeng_new1.txt', 'r', encoding='utf-8').readlines()
-else:
-    char_set = open('./char_rec/densenet_jp/chn.txt', 'r', encoding='utf-8').readlines()
+char_set = open('./char_rec/densenet_jp/japeng_new1.txt', 'r', encoding='utf-8').readlines()
 for i in range (0, len(char_set)):
 	c = char_set[i].strip('\n')
 	encode_dct[c] = i
@@ -61,14 +58,7 @@ char_set.append('卍')
 nclass = len(char_set)
 # print(nclass)
 mult_model, basemodel = densenet.get_model(False, 32, nclass)
-if LAN == 'jap':
-    # print('日文模型。。。')
-    modelPath = os.path.join(os.getcwd(), './char_rec/models/weights_jap_subscripts_825test1_avg2+3+4.h5')
-else:
-    if MODEL == 'resnet':
-        modelPath = os.path.join(os.getcwd(), './char_rec/models/chn_eng_20190617.h5')
-    else:
-        modelPath = os.path.join(os.getcwd(), './char_rec/models/new_model_crnn.h5')
+modelPath = os.path.join(os.getcwd(), './char_rec/models/weights_jap_subscripts_825test1_avg2+3+4.h5')
 if os.path.exists(modelPath):
     #multi_model = multi_gpu_model(basemodel, 4, cpu_relocation=True)
     #multi_model.load_weights(modelPath)
@@ -100,22 +90,11 @@ def predict_batch(img,image_info):
     #logging.info('jap batch')
     for i in range(len(y_pred)):
         text,scores = decode(y_pred[i])
-        scores = [float(ele) for ele in scores]
-        #rec = rec.tolist()
-        #rec.append(degree)
-        if len(text) > 0:
-            if len(scores) == 1:
-                imagename = {}
-                imagename['location'] = image_info[i]['location']
-                imagename['text'] = text
-                imagename['scores'] = [str(ele) for ele in scores]
-                result_info.append(imagename)
-            elif len(scores)>1 and (sum(scores)*1.0/len(scores)>0.6):
-                imagename = {}
-                imagename['location'] = image_info[i]['location']
-                imagename['text'] = text
-                imagename['scores'] = [str(ele) for ele in scores]
-                result_info.append(imagename)
+        imagename = {}
+        imagename['location'] = image_info[i]['location']
+        imagename['text'] = text
+        imagename['scores'] = [str(ele) for ele in scores]
+        result_info.append(imagename)
     return result_info
 def predict(img):
     width, height = img.size[0], img.size[1]
