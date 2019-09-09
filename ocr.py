@@ -77,7 +77,7 @@ def draw_box(img, boxes):
  
     cv2.imwrite('images/result'+'_'+str(time.time())+'.jpg', img)
 
-def model(img, lan, angle=False, combine=False, lines=[] just_detection = False):
+def model(img, lan, angle=False, combine=False, lines=[], just_detection = False):
     """
     @img: 图片
     @adjust: 是否调整文字识别结果
