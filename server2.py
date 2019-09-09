@@ -52,6 +52,7 @@ class MainHandler(tornado.web.RequestHandler):
         angle = self.get_argument('angle', 'True')
         combine = self.get_argument('combine', 'False')
         lines = self.get_argument('lines', [])
+        just_detection = self.get_argument('just_detection','False')
         if lines:
             lines = eval(lines)
         if not isinstance(lines, list):
@@ -69,6 +70,7 @@ class MainHandler(tornado.web.RequestHandler):
         logging.info('语言类型%s' % lan)
         logging.info('是否需要角度%s' % angle)
         logging.info('是否需要连接%s' % combine)
+        logging.info('只做检测%s' % just_detection)
 
         if angle == 'False':
             angle = False
@@ -79,6 +81,8 @@ class MainHandler(tornado.web.RequestHandler):
             combine = False
         else:
             combine = True
+
+        just_detection = False if just_detection == 'False' else True
 
         try:
             img_buffer = np.asarray(bytearray(file.body), dtype='uint8')
@@ -98,7 +102,7 @@ class MainHandler(tornado.web.RequestHandler):
             pass
 
         start = time.time()
-        results, img_shape = model(img, lan, angle, combine, lines)
+        results, img_shape = model(img, lan, angle, combine, lines ,just_detection)
         end = time.time()
         logging.info('ocr total time %s' % str(end-start))
         #logging.info(results)
