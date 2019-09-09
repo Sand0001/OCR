@@ -45,7 +45,7 @@ char_set.append('卍')
 nclass = len(char_set)
 # print(nclass)
 mult_model, basemodel = densenet.get_model(False, 32, nclass)
-modelPath = os.path.join(os.getcwd(), './char_rec/models/weights_eng_subscripts_823_test3_avg2+3+4.h5')#weights_eng_700_avg_1+2+3.h5
+modelPath = os.path.join(os.getcwd(), './char_rec/models/weights_eng_902_change_symbol_ratio_avg16+17+18.h5')#weights_eng_700_avg_1+2+3.h5
 if os.path.exists(modelPath):
     #multi_model = multi_gpu_model(basemodel, 4, cpu_relocation=True)
     #multi_model.load_weights(modelPath)

@@ -18,14 +18,13 @@ from tornado import httpclient, gen, ioloop, queues
 import tensorflow as tf
 import keras.backend as K
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+os.environ["CUDA_VISIBLE_DEVICES"] = '3'
 # config = tf.compat.v1.ConfigProto()
 # config.gpu_options.allow_growth = True
 
 gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.6)
 config = tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True, log_device_placement=False)
-
-session = tf.compat.v1.Session(config = config)
+session = tf.Session(config = config)
 K.set_session(session)
 
 define("debug",default=True,help="Debug Mode",type=bool)
@@ -102,6 +101,7 @@ class MainHandler(tornado.web.RequestHandler):
         results, img_shape = model(img, lan, angle, combine, lines)
         end = time.time()
         logging.info('ocr total time %s' % str(end-start))
+        #logging.info(results)
         self.write(self.resp({'code':0, 'msg': '', 'result': results, 'shape': img_shape}))
 
     def options(self):

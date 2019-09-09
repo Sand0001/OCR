@@ -272,6 +272,9 @@ def predict_batch(img,image_info):
         text,scores = decode(y_pred[i])
         imagename = {}
         imagename['location'] = image_info[i]['location']
+        if '意4{离霉__生' in  text:
+            logging.info('返回的坐标')
+            logging.info(imagename['location'])
         imagename['text'] = text
         imagename['scores'] = [str(ele) for ele in scores]
         result_info.append(imagename)

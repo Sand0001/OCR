@@ -91,6 +91,7 @@ def model(img, lan, angle=False, combine=False, lines=[]):
     b = time.time()
     logging.info('pse的耗时：%s' % str(b-a))
     results = rec(lan, img, text_recs, angle)
+    #logging.info('全部返回的result')
     #logging.info(results)
 
     # draw_box(img, text_recs)
