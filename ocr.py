@@ -88,7 +88,7 @@ def model(img, lan, angle=False, combine=False, lines=[], just_detection = False
 
     text_recs = pse(img, angle,combine, lines )
     if(just_detection == True):
-        return text_recs , (w , h)
+        return [text_rec.tolist() for text_rec in text_recs] , (w , h)
     b = time.time()
     logging.info('pse的耗时：%s' % str(b-a))
     results = rec(lan, img, text_recs, angle)
