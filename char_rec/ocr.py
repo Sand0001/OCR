@@ -144,6 +144,7 @@ def charRec(lan, img, text_recs, angle):
         pic_info = {}
         #pic_info['picname'] = str(picname)
         pic_info['location'] = [int(a) for a in text_recs[i]]
+        #logging.info('排序前')
         #logging.info(pic_info['location'])
         width, height = image.size[0], image.size[1]
         scale = height * 1.0 / 32
@@ -152,13 +153,14 @@ def charRec(lan, img, text_recs, angle):
         pic_info['image'] = np.array(image)
         image_info.append(pic_info)
     image_info = sort_box(image_info)
-    print('检测框数量',len(image_info))
+    #print('检测框数量',len(image_info))
     batch_image = []
     batch_image_info = []
     if len(image_info) > 0:
         width = image_info[0]['image'].shape[1]
         for index,image1 in enumerate(image_info):
             #print(image)
+            #logging.info('排序后')
             #logging.info(image1['location'])
             image = image1['image']
 
@@ -229,6 +231,7 @@ def charRec(lan, img, text_recs, angle):
             continue 
         '''        
             
+    #logging.info(results)
     return results
 
 

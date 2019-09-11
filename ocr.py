@@ -77,7 +77,7 @@ def draw_box(img, boxes):
  
     cv2.imwrite('images/result'+'_'+str(time.time())+'.jpg', img)
 
-def model(img, lan, angle=False, combine=False, lines=[]):
+def model(img, lan, angle=False, combine=False, lines=[], just_detection = False):
     """
     @img: 图片
     @adjust: 是否调整文字识别结果
@@ -85,30 +85,16 @@ def model(img, lan, angle=False, combine=False, lines=[]):
     h, w, _ = img.shape
     #cv2.imwrite('result.jpg', img)
     a = time.time()
-    # print(type(angle))
-    # print(angle)
-    text_recs = pse(img, angle,combine, lines)
+
+    text_recs = pse(img, angle,combine, lines )
+    if(just_detection == True):
+        return [text_rec.tolist() for text_rec in text_recs] , (w , h)
     b = time.time()
     logging.info('pse的耗时：%s' % str(b-a))
     results = rec(lan, img, text_recs, angle)
-    #logging.info(results)
 
-    # draw_box(img, text_recs)
-    # cv2.imwrite('result'+str(time.time())+'.jpg', img)
     c = time.time()
     logging.info('识别的耗时：%s' %str(c-b))
    
-    # for i in range(len(text_recs)):
-    #     r = [int(a) for a in text_recs[i]]
-    #     part_img = img[r[1]:r[5], r[0]:r[2]]        
-    #     cv2.imwrite('image_rect/'+str(time.time())+'.jpg', part_img)
-    #results = []
-    #for i in text_recs:
-    #    i = i.tolist()
-    #    result = char_rec(img, i)
-    #    if result:
-    #        results.append(result)
-    #    else:
-    #        results.append({'location':change_box(i), 'text':''})
 
     return results, (w, h)
