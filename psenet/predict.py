@@ -52,7 +52,7 @@ def predict(images,angle = True, combine=False, lines=[]):
     res1[res1>0.9]= 1
     res1[res1<=0.9]= 0
     newres1 = []
-    for i in range(3,5):
+    for i in range(0,5):
         n = np.logical_and(res1[:,:,5],res1[:,:,i]) * 255
         n = n.astype('int32')
         newres1.append(n)

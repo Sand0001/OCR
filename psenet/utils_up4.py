@@ -194,21 +194,22 @@ def calc_vote_angle(bin_img):
         for line in lines:
             rho,theta = line[0]
             ## 精度0.5
-            angles.append(theta * 180 / np.pi //0.5 * 0.5)
+            angles.append(theta * 180 / np.pi //0.2 * 0.2)
         return Counter(angles).most_common(1)[0][0]
     
     thin_img = bin_img.astype(np.uint8)
     thin_img_w = thin_img.shape[1]
     thin_img = cv2.ximgproc.thinning(thin_img)
     angles =[]
-    for ratio in [4,5,6]:
+    for ratio in [4,5,6,8]:
         angle = cal_angle(np.copy(thin_img),thin_img_w//ratio)
         if(angle == None):
             continue
         angles.append(angle)
 
     most_angle  = Counter(angles).most_common(1)  
-    most_angle =  0 if len(most_angle)==0 else most_angle[0][0]
+    #未找到角度的处理 则不旋转
+    most_angle =  90 if len(most_angle)==0 else most_angle[0][0]
 
     if(most_angle>=0 and most_angle<=45):
         most_angle = most_angle - 90
