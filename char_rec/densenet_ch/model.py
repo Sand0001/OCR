@@ -44,7 +44,7 @@ Easily_confused = ['入','人','血', '皿', '真', '直', '淋', '沛']
 #Easily_confused_word = {'径':{'真径':'直径'},'入':{'传入':'传入'}}
 Easily_confused_word = {'径':{'真径':'直径'}}
 mult_model, basemodel = densenet.get_model(False, 32, nclass)
-modelPath = os.path.join(os.getcwd(), './char_rec/models/weights_chn_filter_resnet-10one.h5')#weights_eng_finetune_300_finally_resnet-01-1.11.h5
+modelPath = os.path.join(os.getcwd(), './char_rec/models/weights_chn_0919.h5')#weights_eng_finetune_300_finally_resnet-01-1.11.h5
 if os.path.exists(modelPath):
     basemodel.load_weights(modelPath)
 else:
