@@ -101,16 +101,19 @@ def strQ2B(a, max_score_list):
         
         list_a = list(a)
         for i in re.finditer('\.|\(|（|）|\)', a):
-            if list_a[i.start()] == '.':
-                if max_score_list[i.start()] <0.9:
-                    if re.compile(u'[\u4E00-\u9FA5]').findall(a[i.start()-1]):  #判定中文
-                        list_a[i.start()] ='。'
-                    elif a[i.start()-1] ==')' and ((ord(a[i.start()-2]) > 47 and ord(a[i.start()-2]) < 59) or re.compile(u'[\u4E00-\u9FA5]').findall(a[i.start()-2])):
-                        list_a[i.start()] = '。'
-                    elif a[i.start()-1] =='）':
-                        list_a[i.start()] = '。'
-                    elif a[i.start()-1] =='）':
-                        list_a[i.start()] = '。'
+            try:
+                if list_a[i.start()] == '.':
+                    if max_score_list[i.start()] <0.9:
+                        if re.compile(u'[\u4E00-\u9FA5]').findall(a[i.start()-1]):  #判定中文
+                            list_a[i.start()] ='。'
+                        elif a[i.start()-1] ==')' and ((ord(a[i.start()-2]) > 47 and ord(a[i.start()-2]) < 59) or re.compile(u'[\u4E00-\u9FA5]').findall(a[i.start()-2])):
+                            list_a[i.start()] = '。'
+                        elif a[i.start()-1] =='）':
+                            list_a[i.start()] = '。'
+                        elif a[i.start()-1] =='）':
+                            list_a[i.start()] = '。'
+            except:
+                continue
         a = ''.join(list_a)
         a = del_blank(a)
         return a
@@ -252,12 +255,38 @@ def decode_Viterbi(pred):
     strQ2B_text = strQ2B_text.replace('▿',' ')
     strQ2B_text = strQ2B_text.replace('▵','　')
     return strQ2B_text, score_list
+def decode_ori_ori(pred):
+    char_list = []
+    score_list = []
+    pred_text = pred.argmax(axis=1)
+    t1 = time.time()
+    #pred_text = np.argsort(pred,axis=1)
+    #print(pred_text)
+    max_score_index_list = []
+    t2 = time.time()
+    for i in range(len(pred_text)):
+        #if pred_text[i] != nclass - 1: #and ((not (i > 0 and pred_text[i] == pred_text[i - 1])) or (i > 1 and pred_text[i] == pred_text[i - 2])):
+        if pred_text[i] != nclass - 1 and ((not (i > 0 and pred_text[i] == pred_text[i - 1]))):
+            max_score = pred[i][pred_text[i]]
+         
+            pred[i] = 0
+
+            char_list.append(char_set[pred_text[i]])
+            max_score_index_list.append(np.argmax(pred[i],axis=0))
+            score_list.append(max_score)
+    text = u''.join(char_list)
+    strQ2B_text = strQ2B(text, score_list)
+    return strQ2B_text,[str(ele) for ele in score_list]
 def predict_batch(img,image_info):
     y_pred = basemodel.predict_on_batch(img)[:,2:,:]
+    
     result_info = []
     #logging.info('chn batch')
     for i in range(len(y_pred)):
         text,scores = decode_Viterbi(y_pred[i])
+        text_ori,scores_ori = decode_ori_ori(y_pred[i])
+        #if text != text_ori:
+
         imagename = {}
         imagename['location'] = image_info[i]['location']
         imagename['text'] = text
