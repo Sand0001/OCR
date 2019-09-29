@@ -63,7 +63,7 @@ def decode(pred):
     max_score_index = []
     for i in range(len(pred_text)):
         if pred_text[i] != nclass - 1 and ((not (i > 0 and pred_text[i] == pred_text[i - 1]))):
-            max_score = max(pred[i])
+            max_score = pred[i][pred_text[i]]
             pred[i][pred_text[i]] = 0
             second_score_index = pred[i].argmax(axis = 0)
             #if char_set[pred_text[i]] == ' 'and max_score < 0.7:

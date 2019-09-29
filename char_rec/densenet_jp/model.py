@@ -75,7 +75,7 @@ def decode(pred):
     for i in range(len(pred_text)):
         #if pred_text[i] != nclass - 1: #and ((not (i > 0 and pred_text[i] == pred_text[i - 1])) or (i > 1 and pred_text[i] == pred_text[i - 2])):
         if pred_text[i] != nclass - 1 and ((not (i > 0 and pred_text[i] == pred_text[i - 1]))):
-            max_score = max(pred[i])
+            max_score = pred[i][pred_text[i]]
             if max_score < 0.1:  # 去掉概率小于0.1
                 continue 
             char_list.append(char_set[pred_text[i]])

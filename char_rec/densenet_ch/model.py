@@ -4,6 +4,7 @@ import numpy as np
 from imp import reload
 from PIL import Image, ImageOps
 import cv2
+import json
 from keras.layers import Input
 from keras.models import Model
 import keras.backend as K
@@ -27,45 +28,24 @@ if MODEL == 'resnet' and LAN == 'JAP':
     from . import dl_resnet_crnn as densenet
 else:
     from . import dl_resnet_crnn_cudnnlstm as densenet
-
-#LAN = 'jap'
-'''
-characters = keys.alphabet[:]
-characters = characters[1:] + u' '
-characters = ''.join([chr(i) for i in range(32, 127)] + ['卍'])
-nclass = len(characters)
-nclass = 96
-input = Input(shape=(32, None, 1), name='the_input')
-y_pred= densenet.dense_cnn(input, nclass)
-basemodel = Model(inputs=input, outputs=y_pred)
-'''
 encode_dct =  {}
-
-char_set = open('./char_rec/densenet_ch/chn7231.txt', 'r', encoding='utf-8').readlines()
+lfreq = json.loads(open('./char_rec/densenet_ch/count_big.json','r').readlines()[0])
+char_set = open('./char_rec/densenet_ch/chn.txt', 'r', encoding='utf-8').readlines()
 for i in range (0, len(char_set)):
 	c = char_set[i].strip('\n')
 	encode_dct[c] = i
 eng_dict = eng_dict('./char_rec/densenet_ch/corpus/engset.txt')
 char_set = [c.strip('\n') for c in char_set]
 char_set.append('卍')
-#r_char_set = ''
-#for c in char_set:
-#    r_char_set += c
-#    #char_set = ''.join([ch.strip('\n') for ch in char_set] + ['卍'])
-#r_char_set += '卍'
-#char_set = r_char_set
-#print (char_set[encode_dct[" "]])
-#print (char_set[encode_dct["语"]])
-
 
 nclass = len(char_set)
-# print(nclass)
+punctuation = '＂＃＄％＆＇（）＊＋，－／：；＜＝＞＠［＼］＾＿｀｛｜｝～｟｠｢｣､　、〃〈〉《》「」『』【】〔〕〖〗〘〙〚〛〜〝〞〟〰〾〿–—‘’‛“”„‟…‧﹏﹑﹔·！？｡。'
+Easily_confused = ['入','人','血', '皿', '真', '直', '淋', '沛']
+#Easily_confused_word = {'径':{'真径':'直径'},'入':{'传入':'传入'}}
+Easily_confused_word = {'径':{'真径':'直径'}}
 mult_model, basemodel = densenet.get_model(False, 32, nclass)
-modelPath = os.path.join(os.getcwd(), './char_rec/models/weights_chn_new_819_avg2+3+4.h5')#weights_eng_finetune_300_finally_resnet-01-1.11.h5
+modelPath = os.path.join(os.getcwd(), './char_rec/models/weights_chn_0919.h5')#weights_eng_finetune_300_finally_resnet-01-1.11.h5
 if os.path.exists(modelPath):
-    #multi_model = multi_gpu_model(basemodel, 4, cpu_relocation=True)
-    #multi_model.load_weights(modelPath)
-    #basemodel = multi_model
     basemodel.load_weights(modelPath)
 else:
     print ("No Chn Model Loaded, Default Model will be applied")
@@ -121,16 +101,19 @@ def strQ2B(a, max_score_list):
         
         list_a = list(a)
         for i in re.finditer('\.|\(|（|）|\)', a):
-            if list_a[i.start()] == '.':
-                if max_score_list[i.start()] <0.9:
-                    if re.compile(u'[\u4E00-\u9FA5]').findall(a[i.start()-1]):  #判定中文
-                        list_a[i.start()] ='。'
-                    elif a[i.start()-1] ==')' and ((ord(a[i.start()-2]) > 47 and ord(a[i.start()-2]) < 59) or re.compile(u'[\u4E00-\u9FA5]').findall(a[i.start()-2])):
-                        list_a[i.start()] = '。'
-                    elif a[i.start()-1] =='）':
-                        list_a[i.start()] = '。'
-                    elif a[i.start()-1] =='）':
-                        list_a[i.start()] = '。'
+            try:
+                if list_a[i.start()] == '.':
+                    if max_score_list[i.start()] <0.9:
+                        if re.compile(u'[\u4E00-\u9FA5]').findall(a[i.start()-1]):  #判定中文
+                            list_a[i.start()] ='。'
+                        elif a[i.start()-1] ==')' and ((ord(a[i.start()-2]) > 47 and ord(a[i.start()-2]) < 59) or re.compile(u'[\u4E00-\u9FA5]').findall(a[i.start()-2])):
+                            list_a[i.start()] = '。'
+                        elif a[i.start()-1] =='）':
+                            list_a[i.start()] = '。'
+                        elif a[i.start()-1] =='）':
+                            list_a[i.start()] = '。'
+            except:
+                continue
         a = ''.join(list_a)
         a = del_blank(a)
         return a
@@ -142,148 +125,174 @@ def strQ2B(a, max_score_list):
         a = a.replace('？', '?')
         a = del_blank(a)
         return a
-
-def strQ2B_oold(a,max_score_list):
-    if is_chinese(a):
-        a = a.replace('(','（')
-        a = a.replace(')','）')
-        list_a = list(a)
-        for i in re.finditer('\.|\(|（|）|\)', a):
-            if list_a[i.start()] == '.':
-                if max_score_list[i.start()] <0.9:
-                    if re.compile(u'[\u4E00-\u9FA5]').findall(a[i.start()-1]):  #判定中文
-  
-                        list_a[i.start()] ='。'
-                    elif a[i.start()-1] ==')' and ((ord(a[i.start()-2]) > 47 and ord(a[i.start()-2]) < 59) or re.compile(u'[\u4E00-\u9FA5]').findall(a[i.start()-2])):
-                        list_a[i.start()] = '。'
-                    elif a[i.start()-1] =='）':
-                        list_a[i.start()] = '。'
-                    elif a[i.start()-1] =='）':
-                        list_a[i.start()] = '。'
-        return ''.join(list_a)
-    else:
-        a = a.replace('（', '(')
-        a = a.replace('）', ')')
-    return a
-
-def decode_new(pred):
-    char_list = []
-    score_list = []
-    second_score_list = []
-    pred_text = pred.argmax(axis=2)[0]
-    for i in range(len(pred_text)):
-        #if pred_text[i] != nclass - 1: #and ((not (i > 0 and pred_text[i] == pred_text[i - 1])) or (i > 1 and pred_text[i] == pred_text[i - 2])):
-        if pred_text[i] != nclass - 1 and ((not (i > 0 and pred_text[i] == pred_text[i - 1]))):
-            max_score = max(pred[0][i])
-            pred[0][i][pred_text[i]] = 0
-            second_score_index = pred[0][i].argmax(axis = 0)
-            #print(pred_text[i],second_score_index)
-            second_score_list.append(second_score_index)
-            #if max_score < 0.1:  # 去掉概率小于0.1
-
-            #    continue
-
-            #try:
-            #    if char_list[-1] == 'g' and char_list[-2] == 'm'and char_set[pred_text[i]] == 'l':
-            #        char_set[pred_text[i]] = '/'
-            #except:
-            #    print('ssss')
-            char_list.append(char_set[pred_text[i]])
-            score_list.append(float(max_score))
-
-    text = u''.join(char_list)
-    word_list = text.split(' ')
-    text_list = list(text)
-    word_list = filter(None,word_list)
-    word_dict = eng_dict.word_dict
-    for word in word_list:
-        if word in word_dict:
-            #print('word in word_dict',word)
-            continue
+k = 0.00000001
+def get_bigram_score(s):
+    score = 1
+    spilt_list = list(s)
+    for i,word  in enumerate(spilt_list):
+        if i == 0:
+            word_combine = word
+            score = 1*1
         else:
-            #print('word not in word_dict',word,'text:',text)
-            try:
+            word_combine = spilt_list[i-1]+word
 
-                for i in re.finditer(word, text):
-                    wrong_w_index_list = np.where(np.array(score_list[i.start():i.end()])<0.9)[0]
-                    if len(wrong_w_index_list) < 3:
-                        for n in wrong_w_index_list:
-                            wrong_w_index = i.start() + wrong_w_index_list[0]
-                  
-                            if second_score_list[wrong_w_index]!= nclass - 1:
+        if word_combine in lfreq and i!=0:
+            score = score * lfreq[word_combine]*1.0/lfreq[word]
+            #print(word_combine,lfreq[word_combine])
+        else:
+            score = score* k
+            #print(word_combine,0)
+    return score
+def char_in_Easily_confused_word(s1,s2):
+    if s1 + s2 in Easily_confused_word[s2]:
+        return Easily_confused_word[s2][s1 + s2]
+def Vierbi_simple(text_tmp,score_list_tmp,second_score_list_index_tmp,thresh_tmp):
+    thresh_big = 0.95
+    thresh = 0.6
+    wrong_w_index_list = []
+    start_index = 0
+    if len(thresh_tmp) >0:
+        for j in thresh_tmp:
+            wrong_w_index_list += np.where(np.array(score_list_tmp[start_index:j]) < thresh)[0].tolist()
+            if score_list_tmp[j] < thresh_big:
+                wrong_w_index_list += [j]
+            if j!= len(text_tmp)-1:
+                start_index = j+1
+            else:
+                break
+    else:
+        wrong_w_index_list = np.where(np.array(score_list_tmp) < thresh)[0]  # 查看临时 score_list中有没有低于0.9的
+    if len(score_list_tmp) > 1 and len(wrong_w_index_list) <4:    #现在将限定一个字数解除，可更改多个错字
 
-                                text_list[wrong_w_index] = char_set[second_score_list[wrong_w_index]]
+        for j in wrong_w_index_list:
+            tmp_char_list = list(text_tmp)
+
+            second_score_index = second_score_list_index_tmp[j].argmax(axis=0)  # second index
+            second_score = second_score_list_index_tmp[j][second_score_index]
+            tmp_char_list[j] = char_set[second_score_index]
+            if j ==0:
+                gama = 0.1  #惩罚因子
+            else:
+                gama = 1
+            # s_score = get_bigram_score(text_tmp)
+            # sb_score = get_bigram_score(''.join(tmp_char_list))   # 获取 校正后bigram分数
+            s_score = get_bigram_score(text_tmp) ** gama*score_list_tmp[j]
+            sb_score = get_bigram_score(''.join(tmp_char_list)) ** gama *second_score # 获取 校正后bigram分数
+            if s_score > sb_score:
+                text_tmp = text_tmp
+            else:
+                #print('转换前：',text_tmp)
+                #print('转换后: ',''.join(tmp_char_list))
+                text_tmp = ''.join(tmp_char_list)
+
+    #else:
+    text_tmp_final = text_tmp  # 将临时text 合并到最终返回的text里
+    return text_tmp_final
+def decode_Viterbi(pred):
+    pred_text = pred.argmax(axis=1)
+    text_final = ''
+    text_tmp = ''
+    score_list_tmp = []
+    second_score_list_index_tmp = []
+    score_list = []
+    thresh_tmp = []
+    num_symble = 0
+    for i in range(len(pred_text)):
+        # pred if pred_text[i] != nclass - 1: #and ((not (i > 0 and pred_text[i] == pred_text[i - 1])) or (i > 1 and pred_text[i] == pred_text[i - 2])):
+        if pred_text[i] != nclass - 1 and ((not (i > 0 and pred_text[i] == pred_text[i - 1]))):
+            max_score = pred[i][pred_text[i]]
+            pred[i][pred_text[i]] = 0
+            second_score_list_index_tmp.append(pred[i])
+
+            char = char_set[pred_text[i]]
+            if char not in punctuation:
+                score_list_tmp.append(max_score)
+                if char in Easily_confused_word:  # 向前寻找词语，向前查找一个字 强制替换易混词  现在先查找一个字 ，之后根据统计添加查找多个字
+                    if len(text_tmp) > 0:
+                        char_word = char_in_Easily_confused_word(text_tmp[-1], char)
+                        if char_word:
+                            text_tmp = text_tmp[:-1] + char_word
+                        else:
+                            text_tmp += char
                     else:
-                        break
-                continue
-            except:
-                continue
-    #text = text.replace('mgl','mg/')
-    #return re.compile(u'[\u4E00-\u9FA5]').sub('',text), score_list
-    text = ''.join(text_list)
-    #re.compile(u'[\u4E00-\u9FA5]').sub('',text)
-    text = text.replace('^oC','°C')
-    return text,score_list
+                        text_tmp += char
+                elif char in Easily_confused:
+                    # thresh_tmp.append(True)  # 判断阈值的tmp_list
+                    thresh_tmp.append(num_symble)
+                    text_tmp += char
+                else:
+                    # thresh_tmp.append(False)
+                    text_tmp += char
+                num_symble += 1
+            else:
+                text_final += Vierbi_simple(text_tmp, score_list_tmp, second_score_list_index_tmp, thresh_tmp)
+                # text_final += text_tmp_final
+                text_final += char  # 将else的标点也加上
+                score_list += score_list_tmp  #
+                score_list.append(max_score)  # 目前分数列表里不管有没有矫正存的都是分数最大值
 
+                second_score_list_index_tmp = []  # 将临时 second score index list 初始化
+                score_list_tmp = []  # 将临时最大分数list初始化
+                thresh_tmp = []
+                num_symble = 0
+                text_tmp = ''  # 将临时text 初始化
+                continue
+    if len(text_tmp) > 1:  # 为防止遗漏 ，还是加一下text_tmp
+        text_tmp_final = Vierbi_simple(text_tmp, score_list_tmp, second_score_list_index_tmp, thresh_tmp)
+        # text_tmp_final = text_tmp
+    else:
+        text_tmp_final = text_tmp
 
-def decode(pred):
+    text_final += text_tmp_final
+    score_list += score_list_tmp
+    strQ2B_text = strQ2B(text_final, score_list)
+    # if len(text_final) > 0:
+    #     if text_final[-1] == ']' or strQ2B_text[-1] == '卍':
+    #         text_final = text_final[:-1]
+    #         score_list = score_list[:-1]
+    score_list = [str(ele) for ele in score_list]
+    #strQ2B_text = strQ2B_text.
+    strQ2B_text = strQ2B_text.replace('▿',' ')
+    strQ2B_text = strQ2B_text.replace('▵','　')
+    return strQ2B_text, score_list
+def decode_ori_ori(pred):
     char_list = []
     score_list = []
     pred_text = pred.argmax(axis=1)
+    t1 = time.time()
+    #pred_text = np.argsort(pred,axis=1)
+    #print(pred_text)
+    max_score_index_list = []
+    t2 = time.time()
     for i in range(len(pred_text)):
         #if pred_text[i] != nclass - 1: #and ((not (i > 0 and pred_text[i] == pred_text[i - 1])) or (i > 1 and pred_text[i] == pred_text[i - 2])):
         if pred_text[i] != nclass - 1 and ((not (i > 0 and pred_text[i] == pred_text[i - 1]))):
-            max_score = max(pred[i])
-            if max_score < 0.1:  # 去掉概率小于0.1
-             
-                continue
-            
-            #try:
-            #    if char_list[-1] == 'g' and char_list[-2] == 'm'and char_set[pred_text[i]] == 'l':
-            #        char_set[pred_text[i]] = '/'
-            #except:
-            #    print('ssss')
+            max_score = pred[i][pred_text[i]]
+         
+            pred[i] = 0
+
             char_list.append(char_set[pred_text[i]])
-            score_list.append(str(max_score))
+            max_score_index_list.append(np.argmax(pred[i],axis=0))
+            score_list.append(max_score)
     text = u''.join(char_list)
-    #text = text.replace('mgl','mg/')
-    #return re.compile(u'[\u4E00-\u9FA5]').sub('',text), score_list
-    float_score_list = [float(i) for i in score_list]
-    text = strQ2B(text,float_score_list)
-    return text,score_list
-def strQ2B_old(a):
-    list_a = list(a)
-    for i in re.finditer('\.', a):
-        if re.compile(u'[\u4E00-\u9FA5]').findall(a[i.start()-1]):  #判定中文
-
-            list_a[i.start()] ='。'
-        elif a[i.start()-1] ==')' and ((ord(a[i.start()-2]) > 47 and ord(a[i.start()-2]) < 59) or re.compile(u'[\u4E00-\u9FA5]').findall(a[i.start()-2])):
-        #elif a[i.start()-1] ==')' and (ord(a[i.start()-2]) > 47 and ord(a[i.start()-2]) < 59):
-            list_a[i.start()] = '。'
-        elif a[i.start()-1] =='）':
-            list_a[i.start()] = '。'
-    return ''.join(list_a)
-
+    strQ2B_text = strQ2B(text, score_list)
+    return strQ2B_text,[str(ele) for ele in score_list]
 def predict_batch(img,image_info):
     y_pred = basemodel.predict_on_batch(img)[:,2:,:]
+    
     result_info = []
     #logging.info('chn batch')
     for i in range(len(y_pred)):
-        text,scores = decode(y_pred[i])
+        text,scores = decode_Viterbi(y_pred[i])
+        text_ori,scores_ori = decode_ori_ori(y_pred[i])
+        #if text != text_ori:
+
         imagename = {}
         imagename['location'] = image_info[i]['location']
-        if '意4{离霉__生' in  text:
-            logging.info('返回的坐标')
-            logging.info(imagename['location'])
         imagename['text'] = text
         imagename['scores'] = [str(ele) for ele in scores]
         result_info.append(imagename)
     return result_info
-
-
-
-
-
 def predict(img):
     width, height = img.size[0], img.size[1]
     scale = height * 1.0 / 32
