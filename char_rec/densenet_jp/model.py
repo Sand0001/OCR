@@ -38,7 +38,7 @@ basemodel = Model(inputs=input, outputs=y_pred)
 '''
 encode_dct =  {}
 
-char_set = open('./char_rec/densenet_jp/japeng_new1.txt', 'r', encoding='utf-8').readlines()
+char_set = open('./char_rec/densenet_jp/japeng_new.txt', 'r', encoding='utf-8').readlines()
 for i in range (0, len(char_set)):
 	c = char_set[i].strip('\n')
 	encode_dct[c] = i
@@ -58,7 +58,7 @@ char_set.append('卍')
 nclass = len(char_set)
 # print(nclass)
 mult_model, basemodel = densenet.get_model(False, 32, nclass)
-modelPath = os.path.join(os.getcwd(), './char_rec/models/weights_jap_subscripts_825test1_avg2+3+4.h5')
+modelPath = os.path.join(os.getcwd(), './char_rec/models/weights_jap_add_fonts1015_avg5+6+7.h5')
 if os.path.exists(modelPath):
     #multi_model = multi_gpu_model(basemodel, 4, cpu_relocation=True)
     #multi_model.load_weights(modelPath)
