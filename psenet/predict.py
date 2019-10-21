@@ -47,7 +47,7 @@ def predict(images,angle = True, combine=False, lines=[]):
 
     res = sess.run([op], feed_dict={ip:images})
     b =time.time()
-    print('pse的模型预测耗时：', str(b-a))
+    logging.info('pse的模型预测耗时：{}'.format(b-a))
     res1 = res[0][0]
     res1[res1>0.9]= 1
     res1[res1<=0.9]= 0
@@ -97,7 +97,7 @@ def predict(images,angle = True, combine=False, lines=[]):
    
 
     c = time.time()
-    print('pse的连接部分耗时：', str(c-b))
+    logging.info('pse的连接部分耗时：{}'.format(c-b))
     results = []
     for rt in rects:
         # rt = [rt[0][0], rt[0][1], rt[1][0], rt[1][1], rt[2][0], rt[2][1], rt[3][0], rt[3][1]]
