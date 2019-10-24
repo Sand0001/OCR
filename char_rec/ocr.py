@@ -8,9 +8,15 @@ import logging
 from math import *
 import numpy as np
 from PIL import Image
-from char_rec.densenet_jp.model import predict_batch as keras_densenet_jp
-from char_rec.densenet_ch.model import predict_batch as keras_densenet_ch
-from char_rec.densenet_eng.model import predict_batch as keras_densenet_eng
+from char_rec.predict import predict
+
+
+predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
+			eng_charset_path='./char_rec/corpus/eng_new.txt',
+                        jap_charset_path='./char_rec/corpus/japeng_new1.txt',
+			eng_model_path = './char_rec/models/weights_eng_add_fonts1018_chnage_lr_03-one.h5',
+			chn_model_path = './char_rec/models/weights_chn_0925_resnet-05-one.h5',
+			jap_model_path = './char_rec/models/weights_jap_add_fonts1015_avg5+6+7.h5')
 
 def dumpRotateImage(img, degree, pt1, pt2, pt3, pt4):
     height, width = img.shape[:2]
@@ -88,21 +94,22 @@ def charRec(lan, img, text_recs, angle):
     text_recs：box
     angle：True、False是否需要角度
     '''
-    if lan.upper() == 'CHE':
-        print('CHE')
-        keras_densenet = keras_densenet_ch
-    elif lan.upper() == 'JPE':
-        print('JPE')
-        keras_densenet = keras_densenet_jp
-    elif lan.upper() == 'ENG':
-        print('ENG')
-        keras_densenet = keras_densenet_eng
-    else:
-        print('CHE')
-        keras_densenet = keras_densenet_ch
+    # if lan.upper() == 'CHE':
+    #     print('CHE')
+    #     keras_densenet = keras_densenet_ch
+    # elif lan.upper() == 'JPE':
+    #     print('JPE')
+    #     keras_densenet = keras_densenet_jp
+    # elif lan.upper() == 'ENG':
+    #     print('ENG')
+    #     keras_densenet = keras_densenet_eng
+    # else:
+    #     print('CHE')
+    #     keras_densenet = keras_densenet_ch
     xDim, yDim = img.shape[1], img.shape[0]
     h, w = img.shape[:2]
     print('angle',angle)
+    print('lan',lan)
     if angle:
         angle = text_recs[0][-1]
         rec = np.array(text_recs)[:,:-1].reshape(-1, 4, 2)
@@ -178,11 +185,11 @@ def charRec(lan, img, text_recs, angle):
                 batch_image.append(img)
                 batch_image_info.append(image1)
                 if index == len(image_info)-1:
-                    batch_results = keras_densenet(np.array(batch_image),batch_image_info)
+                    batch_results = predict.predict_batch(np.array(batch_image),batch_image_info,lan)
                     results +=batch_results
             else:
                 #batch_fill = True
-                batch_results = keras_densenet(np.array(batch_image),batch_image_info)
+                batch_results = predict.predict_batch(np.array(batch_image),batch_image_info,lan)
                 results +=batch_results
                 #try:
                 if True:
@@ -193,7 +200,7 @@ def charRec(lan, img, text_recs, angle):
                     batch_image = [img]
                     batch_image_info = [image1]
                     if index == len(image_info)-1:
-                        batch_results = keras_densenet(np.array(batch_image),batch_image_info)
+                        batch_results = predict.predict_batch(np.array(batch_image),batch_image_info,lan)
                         results +=batch_results
                 #except Exception as e :
 
@@ -233,5 +240,6 @@ def charRec(lan, img, text_recs, angle):
             
     #logging.info(results)
     return results
+
 
 
