@@ -5,8 +5,8 @@ from char_rec import dl_resnet_crnn_cudnnlstm as densenet
 
 
 decode_ctc = decode_ctc(eng_dict_path_file='./char_rec/corpus/eng_dict.pkl',
-                      lfreq_chn_word_path='./char_rec/corpus/count_word_chn0.json',
-                      lfreq_jap_word_path='./char_rec/corpus/count_word_chn0.json')
+                      lfreq_chn_word_path='./char_rec/corpus/char_and_word_bigram_chneng.json',
+                      lfreq_jap_word_path='./char_rec/corpusar_and_word_bigram_jap.json')
 class predict():
     def __init__(self,**kwargs):
 
