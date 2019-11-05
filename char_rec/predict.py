@@ -97,15 +97,15 @@ class predict():
             basemodel = self.chn_model
             char_set = self.chn_charset
         #if lan.upper() == 'CHN':
-        #ab = time.time()
-        #y_pred = self.chn_res_model.predict_on_batch(img)[:, 2:, :]
-        #self.res_predict_time += time.time() - ab
+        ab = time.time()
+        y_pred = self.chn_res_model.predict_on_batch(img)[:, 2:, :]
+        self.res_predict_time += time.time() - ab
 
-        a = time.time()
-        global graph
-        with graph.as_default():
-            y_pred = basemodel.predict_on_batch(img)[:, 2:, :]
-        self.predict_time += time.time() - a
+        #a = time.time()
+        #global graph
+        #with graph.as_default():
+        #    y_pred = basemodel.predict_on_batch(img)[:, 2:, :]
+        #self.predict_time += time.time() - a
         result_info = []
         # logging.info('chn batch')
         for i in range(len(y_pred)):
