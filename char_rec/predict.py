@@ -22,8 +22,8 @@ class predict():
         self.chn_model = self.load_model(kwargs.get('chn_model_path'),'chn')
         self.jap_model = self.load_model(kwargs.get('jap_model_path'),'jap')
 
-        self.chn_res_model = self.load_res_model(kwargs.get('chn_res_model_path'),'chn')
-        self.res_predict_time = 0
+        #self.chn_res_model = self.load_res_model(kwargs.get('chn_res_model_path'),'chn')
+        #self.res_predict_time = 0
 
         self.predict_time = 0
         self.decode_time = 0
@@ -97,15 +97,15 @@ class predict():
             basemodel = self.chn_model
             char_set = self.chn_charset
         #if lan.upper() == 'CHN':
-        ab = time.time()
-        y_pred = self.chn_res_model.predict_on_batch(img)[:, 2:, :]
-        self.res_predict_time += time.time() - ab
+        #ab = time.time()
+        #y_pred = self.chn_res_model.predict_on_batch(img)[:, 2:, :]
+        #self.res_predict_time += time.time() - ab
 
-        #a = time.time()
-        #global graph
-        #with graph.as_default():
-        #    y_pred = basemodel.predict_on_batch(img)[:, 2:, :]
-        #self.predict_time += time.time() - a
+        a = time.time()
+        global graph
+        with graph.as_default():
+            y_pred = basemodel.predict_on_batch(img)[:, 2:, :]
+        self.predict_time += time.time() - a
         result_info = []
         # logging.info('chn batch')
         for i in range(len(y_pred)):
