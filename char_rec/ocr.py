@@ -152,21 +152,20 @@ def charRec(lan, img, text_recs, angle):
         if partImg.shape[0] < 1 or partImg.shape[1] < 1 or partImg.shape[0] > 2 * partImg.shape[1]:
             results.append({'location':[int(i) for i in text_recs[i]], 'text': '', 'scores':[0.0]})
             continue
-        #part_img_tmp_path  = './char_rec/tmp_rec/'
-        #picname = str(time.time()) + '.jpg'
-        #cv2.imwrite(part_img_tmp_path+picname,partImg)
-        image = Image.fromarray(partImg).convert('L')
+        image = cv2.cvtColor(partImg,cv2.COLOR_BGR2GRAY) 
+        #image = Image.fromarray(partImg).convert('L')
         #image.save('image_rect/rect_result_'+str(time.time())+'.jpg')
         pic_info = {}
         #pic_info['picname'] = str(picname)
         pic_info['location'] = [int(a) for a in text_recs[i]]
         #logging.info('排序前')
         #logging.info(pic_info['location'])
-        width, height = image.size[0], image.size[1]
+        width, height = image.size[1], image.size[0]
         scale = height * 1.0 / 32
         width = int(width / scale)
-        image = image.resize((width, 32), Image.ANTIALIAS)
-        pic_info['image'] = np.array(image)
+        image = cv2.resize(image,(width, 32))
+        #image = image.resize((width, 32), Image.ANTIALIAS)
+        pic_info['image'] = image
         image_info.append(pic_info)
     t1 = time.time()
     image_info = sort_box(image_info)
@@ -254,7 +253,7 @@ def charRec(lan, img, text_recs, angle):
     predict.predict_time = 0
     logging.info('decode 耗时：%s' %str(predict.decode_time))
     predict.decode_time = 0
-    logging.info('resnet predict 耗时：%s' %str(predict.res_predict_time))
+    #logging.info('resnet predict 耗时：%s' %str(predict.res_predict_time))
     #predict.res_predict_time = 0
     return results
 
