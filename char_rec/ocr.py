@@ -251,9 +251,9 @@ def charRec(lan, img, text_recs, angle):
         '''        
             
     logging.info('predict 耗时：%s' %str(predict.predict_time))
-    predict.predict_time = 0
+    #predict.predict_time = 0
     logging.info('decode 耗时：%s' %str(predict.decode_time))
-    #predict.decode_time = 0
+    predict.decode_time = 0
     logging.info('resnet predict 耗时：%s' %str(predict.res_predict_time))
     predict.res_predict_time = 0
     return results
