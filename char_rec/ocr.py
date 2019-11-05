@@ -14,9 +14,16 @@ from char_rec.predict import predict
 predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
 			eng_charset_path='./char_rec/corpus/eng_new.txt',
                         jap_charset_path='./char_rec/corpus/japeng_new1.txt',
-			eng_model_path = './char_rec/models/weights_eng_add_fonts1018_shufflenet_chage_lr2-avg2+3+4.h5',
-			chn_model_path = './char_rec/models/weights_chn_1028_shufflenet_chage_lr01-avg_1+2+3.h5',
-			jap_model_path = './char_rec/models/weights_jap_1101_shufflenet_change_lr01-avg1+2+3.h5')
+			eng_model_path = './char_rec/models/weights_eng_902_change_symbol_ratio_avg16+17+18.h5',
+			chn_model_path = './char_rec/models/weights_chn_0925_resnet-05-one.h5',
+			jap_model_path = './char_rec/models/weights_jap_add_fonts1015_avg5+6+7.h5')
+'''
+predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
+                        eng_charset_path='./char_rec/corpus/eng_new.txt',
+                        jap_charset_path='./char_rec/corpus/japeng_new1.txt',
+                        eng_model_path = './char_rec/models/weights_eng_add_fonts1018_shufflenet_chage_lr2-avg2+3+4.h5',
+                        chn_model_path = './char_rec/models/weights_chn_1028_shufflenet_chage_lr01-avg_1+2+3.h5',
+                        jap_model_path = './char_rec/models/weights_jap_1101_shufflenet_change_lr01-avg1+2+3.h5')'''
 
 def dumpRotateImage(img, degree, pt1, pt2, pt3, pt4):
     height, width = img.shape[:2]
@@ -106,10 +113,11 @@ def charRec(lan, img, text_recs, angle):
     # else:
     #     print('CHE')
     #     keras_densenet = keras_densenet_ch
+    t0 = time.time()
     xDim, yDim = img.shape[1], img.shape[0]
     h, w = img.shape[:2]
-    print('angle',angle)
-    print('lan',lan)
+    #print('angle',angle)
+    #print('lan',lan)
     if angle:
         angle = text_recs[0][-1]
         rec = np.array(text_recs)[:,:-1].reshape(-1, 4, 2)
@@ -159,7 +167,10 @@ def charRec(lan, img, text_recs, angle):
         image = image.resize((width, 32), Image.ANTIALIAS)
         pic_info['image'] = np.array(image)
         image_info.append(pic_info)
+    t1 = time.time()
     image_info = sort_box(image_info)
+    logging.info('排序时间：%s' %str(time.time() - t1))
+    logging.info('预处理时间: %s' %str(time.time() - t0))
     #print('检测框数量',len(image_info))
     batch_image = []
     batch_image_info = []
