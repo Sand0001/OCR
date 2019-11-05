@@ -2,8 +2,8 @@ import os
 import time
 import tensorflow as tf
 from char_rec.decode import decode_ctc
-from char_rec import shufflenet_res_crnn as densenet
-
+#from char_rec import shufflenet_res_crnn as densenet
+from char_rec import dl_resnet_crnn_cudnnlstm as densenet
 
 decode_ctc = decode_ctc(eng_dict_path_file='./char_rec/corpus/eng_dict.pkl',
                       lfreq_chn_word_path='./char_rec/corpus/char_and_word_bigram_chneng.json',
