@@ -10,7 +10,7 @@ import numpy as np
 from PIL import Image
 from char_rec.predict import predict
 
-
+'''
 predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
 			eng_charset_path='./char_rec/corpus/eng_new.txt',
                         jap_charset_path='./char_rec/corpus/japeng_new1.txt',
@@ -23,7 +23,8 @@ predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
                         jap_charset_path='./char_rec/corpus/japeng_new1.txt',
                         eng_model_path = './char_rec/models/weights_eng_add_fonts1018_shufflenet_chage_lr2-avg2+3+4.h5',
                         chn_model_path = './char_rec/models/weights_chn_1028_shufflenet_chage_lr01-avg_1+2+3.h5',
-                        jap_model_path = './char_rec/models/weights_jap_1101_shufflenet_change_lr01-avg1+2+3.h5')'''
+                        jap_model_path = './char_rec/models/weights_jap_1101_shufflenet_change_lr01-avg1+2+3.h5',
+                        chn_res_model_path = './char_rec/models/weights_chn_0925_resnet-05-one.h5')
 
 def dumpRotateImage(img, degree, pt1, pt2, pt3, pt4):
     height, width = img.shape[:2]
@@ -253,6 +254,8 @@ def charRec(lan, img, text_recs, angle):
     predict.predict_time = 0
     logging.info('decode 耗时：%s' %str(predict.decode_time))
     predict.decode_time = 0
+    logging.info('resnet predict 耗时：%s' %str(predict.res_predict_time))
+    predict.res_predict_time = 0
     return results
 
 
