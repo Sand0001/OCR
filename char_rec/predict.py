@@ -97,9 +97,9 @@ class predict():
             basemodel = self.chn_model
             char_set = self.chn_charset
         #if lan.upper() == 'CHN':
-        ab = time.time()
-        y_pred = self.chn_res_model.predict_on_batch(img)[:, 2:, :]
-        self.res_predict_time += time.time() - ab
+        #ab = time.time()
+        #y_pred = self.chn_res_model.predict_on_batch(img)[:, 2:, :]
+        #self.res_predict_time += time.time() - ab
 
         a = time.time()
         global graph
