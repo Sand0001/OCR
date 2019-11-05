@@ -160,7 +160,7 @@ def charRec(lan, img, text_recs, angle):
         pic_info['location'] = [int(a) for a in text_recs[i]]
         #logging.info('排序前')
         #logging.info(pic_info['location'])
-        width, height = image.size[1], image.size[0]
+        width, height = image.shape[1], image.shape[0]
         scale = height * 1.0 / 32
         width = int(width / scale)
         image = cv2.resize(image,(width, 32))
