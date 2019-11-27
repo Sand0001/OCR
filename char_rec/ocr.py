@@ -26,6 +26,10 @@ predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
                         jap_model_path = './char_rec/models/weights_jap_1101_shufflenet_change_lr01-avg1+2+3.h5',
                         chn_res_model_path = './char_rec/models/weights_chn_0925_resnet-05-one.h5')
 
+class INFO():
+    def __init__(self):
+        self.gen_batch_time = 0
+INFO = INFO()
 def dumpRotateImage(img, degree, pt1, pt2, pt3, pt4):
     height, width = img.shape[:2]
     heightNew = int(width * fabs(sin(radians(degree))) + height * fabs(cos(radians(degree))))
@@ -59,7 +63,7 @@ def warpAffinePadded(src_h,src_w,M,mode='matrix'):
     returns:
         offset_M : 新的旋转矩阵
         padded_w,padded_h : 图像的新宽、高
-    
+
     ------------------------------------
     用法：
         h,w = imagetest.shape[0:2]
@@ -70,7 +74,7 @@ def warpAffinePadded(src_h,src_w,M,mode='matrix'):
     '''
     if(mode == 'angle'):
         M = cv2.getRotationMatrix2D((src_w/2,src_h/2),M,1.0)
-    
+
     # 图像四个顶点
     lin_pts = np.array([
         [0,0],
@@ -79,7 +83,7 @@ def warpAffinePadded(src_h,src_w,M,mode='matrix'):
         [0,src_h]
     ])
     trans_lin_pts = cv2.transform(np.array([lin_pts]),M)[0]
-    
+
     #最大最小点
     min_x = np.floor(np.min(trans_lin_pts[:,0])).astype(int)
     min_y = np.floor(np.min(trans_lin_pts[:,1])).astype(int)
@@ -91,9 +95,77 @@ def warpAffinePadded(src_h,src_w,M,mode='matrix'):
     #print('offsetx:{},offsety:{}'.format(offset_x,offset_y))
     offset_M = M + [[0,0,offset_x],[0,0,offset_y]]
 
-    padded_w = src_w + (max_x - src_w)  + offset_x 
-    padded_h = src_h + (max_y - src_h)  + offset_y 
+    padded_w = src_w + (max_x - src_w)  + offset_x
+    padded_h = src_h + (max_y - src_h)  + offset_y
     return offset_M,padded_w,padded_h
+
+def gen_batch_predict(image_info,lan):
+    gen_time = time.time()
+    results = []
+    batch_image = []
+    batch_image_info = []
+    image_info_length = len(image_info)
+    if image_info_length > 0:
+        image_info_b = image_info.copy()
+        width = image_info[0]['image'].shape[1]
+        for index, image1 in enumerate(image_info):
+            image = image1['image']
+            min_width = width - 20
+            if image.shape[1] > min_width:
+                channel_one = np.pad(image, ((0, 0), (0, width - image.shape[1])), 'constant',
+                                     constant_values=(255, 255))
+                img = np.array(channel_one, 'f') / 255.0 - 0.5
+                img = np.expand_dims(img, axis=2).swapaxes(0, 1)
+                batch_image.append(img)
+                batch_image_info.append([image1])
+                image_info_b[index] = 0
+            else:
+                batch_tmp = [image_info[index]['image'].shape[1]]   # 放的是  宽
+                batch_image_info_tmp = [image_info[index]]
+                width_list_tmp = [index]    #放的是index
+                for j in range(1, image_info_length):
+                    width_t = image_info[-j]['image'].shape[1]
+                    width_t_1 = image_info[-j-1]['image'].shape[1]
+                    sum_batch_tmp = sum(batch_tmp)
+                    if min_width <= (sum_batch_tmp+2*len(batch_tmp)+ width_t) <= width and image_info_length - j> index and image_info_b[-j]!=0 :
+                        width_list_tmp.append(image_info_length-j)
+                        batch_image_info_tmp.append(image_info[image_info_length-j])
+                        batch_tmp.append(width_t)
+                        image_info_b[-j] = 0
+                        image_info_b[index] = 0
+
+                    if (sum(batch_tmp)+2*(len(batch_tmp)+1)+ width_t_1) > width:
+                        break
+                    # else:
+                    #     batch.append(tmp_list)
+                    #     break
+                if len(batch_tmp)!= 1:
+                    for ii in range(len(width_list_tmp)-1):
+                        if ii == 0:
+                            img_1 = np.pad(image_info[width_list_tmp[ii]]['image'], ((0, 0), (0,2)), 'constant',
+                                     constant_values=(255, 255))   #做2像素的padding
+                            #img_1 = np.concatenate((img_1, image_info[width_list_tmp[ii + 1]]['image']), axis=1)
+                        else:
+                            img_1 = np.pad(img_1, ((0, 0), (0,2)), 'constant',
+                                     constant_values=(255, 255))   #做2像素的padding
+                        img_1 = np.concatenate((img_1,image_info[width_list_tmp[ii+1]]['image']),axis=1)
+                    channel_one = np.pad(img_1, ((0, 0), (0, width - img_1.shape[1])), 'constant',
+                                         constant_values=(255, 255))
+                    #cv2.imwrite('/data/fengjing/ocr_recognition_test/html/image_rec/a.jpg',channel_one)
+                    img = np.array(channel_one, 'f') / 255.0 - 0.5
+                    img = np.expand_dims(img, axis=2).swapaxes(0, 1)
+                    batch_image.append(img)
+
+                    batch_image_info.append(batch_image_info_tmp)
+        INFO.gen_batch_time += time.time() - gen_time
+        #np.save('/data/fengjing/ocr_recognition_server/img_npy/'+str(time.time()) + '.npy', np.array(batch_image))
+        batch_results = predict.predict_batch_v2(np.array(batch_image), batch_image_info, lan)
+        results += batch_results
+        image_info_a = list(filter(None, image_info_b))
+        if image_info_a != []:
+            # b = a.copy()
+            results += gen_batch_predict(image_info_a,lan)
+        return results
 
 def charRec(lan, img, text_recs, angle):
     '''
@@ -144,15 +216,16 @@ def charRec(lan, img, text_recs, angle):
         if he > 50:
             y_offset = 4
         else:
-            y_offset = 2        
+            y_offset = 2
         partImg = img_trans[max(1, r[1]-y_offset):min(h, r[5]+y_offset), max(1, r[0]-2):min(w, r[2]+2)]
         # print(partImg.shape)
-        # cv2.imwrite('re.jpg', img_trans)
+        #picname = str(time.time())+
+        #cv2.imwrite('re.jpg', partImg)
         # if partImg.shape[0] < 1 or partImg.shape[1] < 1 or partImg.shape[0] > 2 * partImg.shape[1]:
-        if partImg.shape[0] < 1 or partImg.shape[1] < 1 or partImg.shape[0] > 2 * partImg.shape[1]:
+        if partImg.shape[0] < 1 or partImg.shape[1] < 1 or partImg.shape[0] > 3 * partImg.shape[1]:
             results.append({'location':[int(i) for i in text_recs[i]], 'text': '', 'scores':[0.0]})
             continue
-        image = cv2.cvtColor(partImg,cv2.COLOR_BGR2GRAY) 
+        image = cv2.cvtColor(partImg,cv2.COLOR_BGR2GRAY)
         #image = Image.fromarray(partImg).convert('L')
         #image.save('image_rect/rect_result_'+str(time.time())+'.jpg')
         pic_info = {}
@@ -171,84 +244,45 @@ def charRec(lan, img, text_recs, angle):
     image_info = sort_box(image_info)
     logging.info('排序时间：%s' %str(time.time() - t1))
     logging.info('预处理时间: %s' %str(time.time() - t0))
-    #print('检测框数量',len(image_info))
-    batch_image = []
-    batch_image_info = []
-    if len(image_info) > 0:
-        width = image_info[0]['image'].shape[1]
-        for index,image1 in enumerate(image_info):
-            #print(image)
-            #logging.info('排序后')
-            #logging.info(image1['location'])
-            image = image1['image']
+    logging.info('gen batch 时间: %s' % str(INFO.gen_batch_time))
+    INFO.gen_batch_time = 0
+    logging.info('检测框数量  %s' %str(len(image_info)))
+    results = gen_batch_predict(image_info, lan)
+    logging.info('返回结果数量  %s' % str(len(results)))
 
-            batch_fill = False
-
-            max_width = width
-            min_width = width - 20
-            #if batch_fill == False:
-
-            if image.shape[1] >min_width:
-
-                channel_one = np.pad(image, ((0, 0), (0, width - image.shape[1])), 'constant', constant_values=(255, 255))
-                img = np.array(channel_one, 'f') / 255.0 - 0.5
-                img = np.expand_dims(img, axis=2).swapaxes(0, 1)
-                batch_image.append(img)
-                batch_image_info.append(image1)
-                if index == len(image_info)-1:
-                    batch_results = predict.predict_batch(np.array(batch_image),batch_image_info,lan)
-                    results +=batch_results
-            else:
-                #batch_fill = True
-                batch_results = predict.predict_batch(np.array(batch_image),batch_image_info,lan)
-                results +=batch_results
-                #try:
-                if True:
-                    width = image_info[index]['image'].shape[1]
-                    channel_one = np.pad(image, ((0, 0), (0, width - image.shape[1])), 'constant', constant_values=(255, 255))
-                    img = np.array(channel_one, 'f') / 255.0 - 0.5
-                    img = np.expand_dims(img, axis=2).swapaxes(0, 1)
-                    batch_image = [img]
-                    batch_image_info = [image1]
-                    if index == len(image_info)-1:
-                        batch_results = predict.predict_batch(np.array(batch_image),batch_image_info,lan)
-                        results +=batch_results
-                #except Exception as e :
-
-
-        '''
-        # 对于竖文本进行切分
-        if partImg.shape[0] > 2 * partImg.shape[1]:
-            img_copy = copy.deepcopy(np.array(image)) 
-            part_points = split_str(img_copy)
-            points_num = len(part_points)
-            if points_num > 2:
-                for i in range(0, points_num-1):
-                    part_img = img_copy[part_points[i]:part_points[i+1], :]
-                    if part_img.shape[0] > 2 * part_img.shape[1]:
+    '''
+    # 对于竖文本进行切分
+    if partImg.shape[0] > 2 * partImg.shape[1]:
+        img_copy = copy.deepcopy(np.array(image)) 
+        part_points = split_str(img_copy)
+        points_num = len(part_points)
+        if points_num > 2:
+            for i in range(0, points_num-1):
+                part_img = img_copy[part_points[i]:part_points[i+1], :]
+                if part_img.shape[0] > 2 * part_img.shape[1]:
+                    continue
+                else:
+                    part_img = Image.fromarray(part_img)
+                    text, scores = keras_densenet(part_img)
+                    if len(scores) == 0:
                         continue
-                    else:
-                        part_img = Image.fromarray(part_img)
-                        text, scores = keras_densenet(part_img)
-                        if len(scores) == 0:
-                            continue
-                        avg_score = sum([float(j) for j in scores])/len(scores)
-                        box = copy.deepcopy([int(j) for j in text_recs[i]])
-                        # box = [int(j) for j in text_recs[i]]
-                        logging.info(str(box))
-                        box[1] += part_points[i]
-                        box[3] += part_points[i]
-                        box[5] += part_points[i+1]
-                        box[7] += part_points[i+1]
-                        logging.info(str(box))
+                    avg_score = sum([float(j) for j in scores])/len(scores)
+                    box = copy.deepcopy([int(j) for j in text_recs[i]])
+                    # box = [int(j) for j in text_recs[i]]
+                    logging.info(str(box))
+                    box[1] += part_points[i]
+                    box[3] += part_points[i]
+                    box[5] += part_points[i+1]
+                    box[7] += part_points[i+1]
+                    logging.info(str(box))
 
-                        if len(text) > 0 and avg_score>0.6:
-                            results.append({'location': box, 'text': text, 'scores': scores})  # 识别
-                        else:
-                            results.append({'location': box, 'text': '', 'scores': [0.0]})  # 识别文字 
-            continue 
-        '''        
-            
+                    if len(text) > 0 and avg_score>0.6:
+                        results.append({'location': box, 'text': text, 'scores': scores})  # 识别
+                    else:
+                        results.append({'location': box, 'text': '', 'scores': [0.0]})  # 识别文字 
+        continue 
+    '''
+
     logging.info('predict 耗时：%s' %str(predict.predict_time))
     predict.predict_time = 0
     logging.info('decode 耗时：%s' %str(predict.decode_time))

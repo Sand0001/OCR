@@ -24,9 +24,14 @@ class decode_ctc():
                 kwargs.get("lfreq_chn_word_path")) as lfreq_chn_word_file, \
                 open(kwargs.get("lfreq_jap_word_path")) as lfreq_jap_word_file:
             self.word_dict = pickle.load(pkl_file)
+            self.word_dict['fl'] = 1
+            self.word_dict['pdw'] = 1
             self.lfreq_chn_word = json.loads(lfreq_chn_word_file.read())  #
             self.lfreq_jap_word = json.loads(lfreq_jap_word_file.read())
         self.k = k
+
+        self.gamma = 2 # 发射概率的阈值
+        self.alpha = 1  # LM 的阈值
         self .Easily_confused_word = {'径':{'真径':'直径'}}
         self.Easily_confused = ['人','入']
         self.wrong_char_num = 5
@@ -140,29 +145,12 @@ class decode_ctc():
                             break
                 # print('word_combine',word_combine)
                 if word_combine in lfreq_word and i != 0 and word in lfreq_word:
+                    #print('word_combine{}  freq {} score {}'.format(word_combine,lfreq_word[word_combine],lfreq_word[word_combine] * 1.0 /lfreq_word[word]))
                     score = score * lfreq_word[word_combine] * 1.0 /lfreq_word[word]
-                    # print(word_combine,lfreq[word_combine])
                 else:
                     score = score * self.k
         return score
 
-    def decode_ori(self, pred,char_set,lan):
-        nclass = len(char_set)
-        char_list = []
-        score_list = []
-        pred_text = pred.argmax(axis=1)
-        for i in range(len(pred_text)):
-            if pred_text[i] != nclass - 1 and ((not (i > 0 and pred_text[i] == pred_text[i - 1]))):
-                max_score = pred[i][pred_text[i]]
-                char_list.append(char_set[pred_text[i]])
-                score_list.append(max_score)
-        text = u''.join(char_list)
-        if lan.upper == 'CHN':
-            text,score_list = decode_ctc.strQ2B(text, score_list)
-        text = text.replace('▿', ' ')
-
-        text = text.replace('▵', '　')
-        return text, [str(ele) for ele in score_list]
     @classmethod
     def strQ2B(cls, a, max_score_list):
         # t4 = time.time()
@@ -172,6 +160,9 @@ class decode_ctc():
             a = a.replace('(', '（')
             a = a.replace(')', '）')
             a = a.replace(',', '，')
+            a = a.replace(':', '：')
+            a = a.replace('?', '？')
+            a = a.replace(';','；')
             list_a = list(a)
             for i in re.finditer('\.|\(|（|）|\)', a):
                 if list_a[i.start()] == '.':
@@ -190,9 +181,30 @@ class decode_ctc():
         else:
             a = a.replace('（', '(')
             a = a.replace('）', ')')
+            a = a.replace('：', ':')
+            a = a.replace('？', '?')
+            a = a.replace('；', ';')
+            a = a.replace('，',',')
             # a = a.replace('。','.')
         #a = cls.filter_blank(a, max_score_list)
         return a,max_score_list
+
+    def decode_ori(self, pred,char_set,lan):
+        nclass = len(char_set)
+        char_list = []
+        score_list = []
+        pred_text = pred.argmax(axis=1)
+        for i in range(len(pred_text)):
+            if pred_text[i] != nclass - 1 and ((not (i > 0 and pred_text[i] == pred_text[i - 1]))):
+                max_score = pred[i][pred_text[i]]
+                char_list.append(char_set[pred_text[i]])
+                score_list.append(max_score)
+        text = u''.join(char_list)
+        if lan.upper() == 'CHN':
+            text,score_list = decode_ctc.strQ2B(text, score_list)
+        text = text.replace('▿', ' ')
+        text = text.replace('▵', '　')
+        return text, [str(ele) for ele in score_list]
 
     def char_in_Easily_confused_word(self,s1, s2):
 
@@ -233,13 +245,15 @@ class decode_ctc():
                     score_list_tmp.append(max_score)
                     wrong_charindex += 1
                 else:
-                    if max_score < 0.9 :  # 优化字符识别成特殊字符的情况
+                    if max_score < 0.6 :  # 优化字符识别成特殊字符的情况
                         second_char_index = pred[i].argmax(axis=0)
                         second_char = char_set[second_char_index]
 
-
-                        if decode_ctc.isalpha(second_char) and len(wrong_charindex_list) <self.wrong_char_num :
+                        if decode_ctc.isalpha(second_char) and len(wrong_charindex_list) <self.wrong_char_num and ('▵' not in char) and (
+                                '▿' not in char):
                             wrong_charindex_list.append(wrong_charindex+1)
+                            text_tmp += char
+                            score_list_tmp.append(max_score)
                             text_tmp_list.append(
                                 {char: {'score': max_score}, second_char: {'score': pred[i][second_char_index]}})
                             continue
@@ -278,13 +292,14 @@ class decode_ctc():
                         text_tmp_list = []
                     # if is_chinese(char): #对汉字的处理
                     if char in self.Easily_confused_word:  # 如果在易混淆词库
-                        s1 = list(word_list[-1].keys())[0]
-                        if len(word_list) > 0 and self.char_in_Easily_confused_word(s1, char):
-                            tmp_s = self.char_in_Easily_confused_word(s1, char)
+                        if word_list!=[]:
+                            s1 = list(word_list[-1].keys())[0]
+                            if len(word_list) > 0 and self.char_in_Easily_confused_word(s1, char):
+                                tmp_s = self.char_in_Easily_confused_word(s1, char)
 
-                            word_list[-1][tmp_s[0]] = word_list[-1][s1]
-                            word_list[-1].pop(s1)  # 将原字符删除掉
-                            # text_tmp = text_tmp[:-1] + char_in_Easily_confused_word(text_tmp[-1], char)
+                                word_list[-1][tmp_s[0]] = word_list[-1][s1]
+                                word_list[-1].pop(s1)  # 将原字符删除掉
+                                # text_tmp = text_tmp[:-1] + char_in_Easily_confused_word(text_tmp[-1], char)
                         word_list.append({char: {'score': max_score}})
                         # print('if',{char: {'scores': max_score}})
 
@@ -316,12 +331,11 @@ class decode_ctc():
         score_list_final = []
         if len(paths) > 1:
             # print('rrrrr')
-            gamma = 1  # 发射概率的阈值
-            alpha = 0.5  # LM 的阈值
+
             for path in paths:
                 word_bigram_score_path = []
                 #get_word_bigram_score(path)
-                word_bigram_score = self.get_word_bigram_score(path,lan) ** alpha
+                word_bigram_score = self.get_word_bigram_score(path,lan) ** self.alpha
                 path = list(path)
                 p_pred = 1
                 for j in range(len(path)):
@@ -341,7 +355,7 @@ class decode_ctc():
 
                 #print('path', path, 'score', word_bigram_score * p_pred ** gamma, 'bigram', word_bigram_score)
 
-                word_bigram_score_list.append(word_bigram_score * p_pred ** gamma) if len(
+                word_bigram_score_list.append(word_bigram_score * p_pred ** self.gamma) if len(
                     path) > 2 else word_bigram_score_list.append(p_pred)  #
                 score_list_final.append(word_bigram_score_path)
             max_score_index = np.argmax(np.array(word_bigram_score_list), axis=0)
@@ -371,7 +385,6 @@ class decode_ctc():
             # assert len(final_text)-final_text.count('▵') - final_text.count('▿') == len(score_list_final)
             final_score = score_list_final
             if lan.upper() == 'CHN':
-
                 final_text, final_score = decode_ctc.strQ2B(final_text, score_list_final)
             strQ2B_text = final_text.replace('▿', ' ')
 
@@ -386,24 +399,35 @@ if __name__ == '__main__':
     kwargs = {}
     #rrrr =
     #'/fengjing/data_script/OCR_textrender/data/chars/eng_new.txt'  chn7213.txt
-    DCTC = decode_ctc(eng_path_file='/fengjing/data_script/OCR_textrender/data/chars/chn7213.txt', chn_path_file='',
-                      jap_path_file='', eng_dict_path_file='eng_dict.pkl',
-                      lfreq_chn_rd_path='/fengjing/dip_server/ocr_data_labeling/count_word_chn0.json',
-                      lfreq_jap_word_path='/fengjing/dip_server/ocr_data_labeling/count_word_chn0.json')
-    npyPath = '/fengjing/test_img/npy_chn5'
+
+    DCTC = decode_ctc(eng_dict_path_file='/fengjing/dip_server/ocr_data_labeling/eng_dict.pkl',
+                            # lfreq_chn_word_path='./char_rec/corpus/char_and_word_bigram_chneng.json',
+                            # lfreq_jap_word_path='./char_rec/corpus/char_and_word_bigram_jap.json')
+                            lfreq_chn_word_path='/fengjing/dip_server/ocr_data_labeling/count_word_chn0.json',
+                            lfreq_jap_word_path='/fengjing/dip_server/ocr_data_labeling/count_word_chn0.json')
+
+    char_set = open('/fengjing/data_script/OCR_textrender/data/chars/chn7213.txt', 'r', encoding='utf-8').readlines()
+    # char_set = open('/fengjing/data_script/OCR_textrender/data/chars/eng_new.txt', 'r', encoding='utf-8').readlines()
+    char_set = [c.strip('\n') for c in char_set] +['卍']
+    #char_set.append('卍')
+    npyPath = '/fengjing/test_img/npy/'
     npyList = os.listdir(npyPath)
     Time0 = 0
     Time1 = 0
-    for npy in npyList:
+    num = 0
+    for npy in npyList[35:36]:
         if 'npy' in npy:
+            num += 1
+            print(num)
             preds = np.load(os.path.join(npyPath, npy))
+            #preds = np.load('/fengjing/test_img/1.npy')
             # print(preds.shape)
             for i in range(len(preds)):
                 pred = preds[i]
                 #print(pred.shape)
                 pred_ctc = pred.copy()
                 a = time.time()
-                text, score = DCTC.decode_chn_eng(pred,'chn',char_set='')
+                text, score = DCTC.decode_chn_eng(pred,'chn',char_set)
                 b = time.time()
                 Time0 = Time0 + b - a
                 #print('加后处理时间:', b - a)
@@ -420,9 +444,9 @@ if __name__ == '__main__':
                 # #print('decode Viterbi',decode_Viterbi(pred1[0]))
                 #
                 c = time.time()
-                text_ctc = DCTC.decode_ori(pred_ctc,'chn')
+                text_ctc,score = DCTC.decode_ori(pred_ctc,char_set,'chn')
                 # print('不加后处理时间:',time.time()-c)
-                # print(text_ctc)
+                print(text_ctc)
                 if text_ctc != text:
                     print('转换前', text_ctc)
                     print('转换后', text)
