@@ -174,6 +174,13 @@ class predict():
 
             self.decode_time += time.time() - b
             text_ori, scores_ori = decode_ctc.decode_ori(y_pred_1, char_set, lan)
+
+            text = text.replace('　','▵')
+            text = text.replace(' ','▿')
+
+            text_ori = text_ori.replace('　', '▵')
+            text_ori = text_ori.replace(' ', '▿')
+
             imagename = {}
             label_and_rec_text = {}
             label_and_rec_text['label'] = ''
