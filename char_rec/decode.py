@@ -1,7 +1,7 @@
 import itertools
 import json
 import re
-
+import logging
 import numpy as np
 import pickle
 
@@ -27,7 +27,9 @@ class decode_ctc():
             self.word_dict['fl'] = 1
             self.word_dict['pdw'] = 1
             self.lfreq_chn_word = json.loads(lfreq_chn_word_file.read())  #
+            logging.info(' chn word file lodding done')
             self.lfreq_jap_word = json.loads(lfreq_jap_word_file.read())
+            logging.info('jap word file lodding done')
         self.k = k
 
         self.gamma = 2 # 发射概率的阈值
