@@ -22,7 +22,7 @@ predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
                         eng_charset_path='./char_rec/corpus/eng_new.txt',
                         jap_charset_path='./char_rec/corpus/japeng_new1.txt',
                         eng_model_path = './char_rec/models/weights_eng_add_fonts1018_shufflenet_chage_lr2-avg2+3+4.h5',
-                        chn_model_path = './char_rec/models/weights_chn_1028_shufflenet_chage_lr01-avg_1+2+3.h5',
+                        chn_model_path = './char_rec/models/weights_chn_1103_seal_bg_fg_shufflenet_change_lr01-02-one.h5',
                         jap_model_path = './char_rec/models/weights_jap_1101_shufflenet_change_lr01-avg1+2+3.h5',
                         chn_res_model_path = './char_rec/models/weights_chn_0925_resnet-05-one.h5')
 
@@ -136,15 +136,11 @@ def gen_batch_predict(image_info,lan):
 
                     if (sum(batch_tmp)+2*(len(batch_tmp)+1)+ width_t_1) > width:
                         break
-                    # else:
-                    #     batch.append(tmp_list)
-                    #     break
                 if len(batch_tmp)!= 1:
                     for ii in range(len(width_list_tmp)-1):
                         if ii == 0:
                             img_1 = np.pad(image_info[width_list_tmp[ii]]['image'], ((0, 0), (0,2)), 'constant',
                                      constant_values=(255, 255))   #做2像素的padding
-                            #img_1 = np.concatenate((img_1, image_info[width_list_tmp[ii + 1]]['image']), axis=1)
                         else:
                             img_1 = np.pad(img_1, ((0, 0), (0,2)), 'constant',
                                      constant_values=(255, 255))   #做2像素的padding
@@ -158,7 +154,6 @@ def gen_batch_predict(image_info,lan):
 
                     batch_image_info.append(batch_image_info_tmp)
         INFO.gen_batch_time += time.time() - gen_time
-        #np.save('/data/fengjing/ocr_recognition_server/img_npy/'+str(time.time()) + '.npy', np.array(batch_image))
         batch_results = predict.predict_batch_v2(np.array(batch_image), batch_image_info, lan)
         results += batch_results
         image_info_a = list(filter(None, image_info_b))
@@ -174,23 +169,9 @@ def charRec(lan, img, text_recs, angle):
     text_recs：box
     angle：True、False是否需要角度
     '''
-    # if lan.upper() == 'CHE':
-    #     print('CHE')
-    #     keras_densenet = keras_densenet_ch
-    # elif lan.upper() == 'JPE':
-    #     print('JPE')
-    #     keras_densenet = keras_densenet_jp
-    # elif lan.upper() == 'ENG':
-    #     print('ENG')
-    #     keras_densenet = keras_densenet_eng
-    # else:
-    #     print('CHE')
-    #     keras_densenet = keras_densenet_ch
     t0 = time.time()
     xDim, yDim = img.shape[1], img.shape[0]
     h, w = img.shape[:2]
-    #print('angle',angle)
-    #print('lan',lan)
     if angle:
         angle = text_recs[0][-1]
         rec = np.array(text_recs)[:,:-1].reshape(-1, 4, 2)
@@ -202,34 +183,23 @@ def charRec(lan, img, text_recs, angle):
     else:
         img_trans = img
         rec_trans = text_recs
-    # print(rec_trans.shape)
-    # print(len(text_recs))
 
     results = []
     image_info = []
     for i in range(len(text_recs)):
         r = [int(a) for a in rec_trans[i]]
-        # print(rec_trans[i])
-        # print(r)
-        # print(img_trans.shape)
         he = r[5] - r[1]
         if he > 50:
             y_offset = 4
         else:
             y_offset = 2
         partImg = img_trans[max(1, r[1]-y_offset):min(h, r[5]+y_offset), max(1, r[0]-2):min(w, r[2]+2)]
-        # print(partImg.shape)
-        #picname = str(time.time())+
-        #cv2.imwrite('re.jpg', partImg)
         # if partImg.shape[0] < 1 or partImg.shape[1] < 1 or partImg.shape[0] > 2 * partImg.shape[1]:
         if partImg.shape[0] < 1 or partImg.shape[1] < 1 or partImg.shape[0] > 3 * partImg.shape[1]:
             results.append({'location':[int(i) for i in text_recs[i]], 'text': '', 'scores':[0.0]})
             continue
         image = cv2.cvtColor(partImg,cv2.COLOR_BGR2GRAY)
-        #image = Image.fromarray(partImg).convert('L')
-        #image.save('image_rect/rect_result_'+str(time.time())+'.jpg')
         pic_info = {}
-        #pic_info['picname'] = str(picname)
         pic_info['location'] = [int(a) for a in text_recs[i]]
         #logging.info('排序前')
         #logging.info(pic_info['location'])
@@ -237,7 +207,6 @@ def charRec(lan, img, text_recs, angle):
         scale = height * 1.0 / 32
         width = int(width / scale)
         image = cv2.resize(image,(width, 32))
-        #image = image.resize((width, 32), Image.ANTIALIAS)
         pic_info['image'] = image
         image_info.append(pic_info)
     t1 = time.time()
