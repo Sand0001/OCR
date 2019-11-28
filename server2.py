@@ -32,8 +32,15 @@ define("port",default=8007,help="run on this port",type=int)
 
 from ocr import model
 
-fmt='%(asctime)s | [%(process)d:%(threadName)s:%(thread)d] | [%(filename)s:%(funcName)s: %(lineno)d] | %(levelname)s | %(message)s'
-logging.basicConfig(filename='ocr-info.log', level=logging.INFO, format=fmt)
+
+# set up logging
+logger = logging.getLogger('ocr-info')
+logger.setLevel(level = logging.INFO)
+format_string = "%(asctime)s - %(levelname)s - %(message)s"
+formatter = logging.Formatter(format_string, datefmt="%Y-%m-%dT%H:%M:%S")
+handler = logging.FileHandler('ocr-info.log')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 class MainHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
@@ -43,7 +50,7 @@ class MainHandler(tornado.web.RequestHandler):
 
     def resp(self, resp_dct):
         resp = json.dumps(resp_dct, ensure_ascii = False)
-        # logging.info(resp)
+        # logger.info(resp)
         return resp
 
     def post(self):
@@ -59,18 +66,18 @@ class MainHandler(tornado.web.RequestHandler):
             lines = []
 
         if not files:
-            logging.info('图片为空')
+            logger.info('图片为空')
             self.write(self.resp({'code':-1, 'msg': '文件为空', 'result': ''}))
             self.finish()
          
         file = files[0]
 
-        logging.info('表格线：%s' % str(lines))
-        logging.info('文件%s' % file.filename)
-        logging.info('语言类型%s' % lan)
-        logging.info('是否需要角度%s' % angle)
-        logging.info('是否需要连接%s' % combine)
-        logging.info('只做检测%s' % just_detection)
+        logger.info('表格线：%s' % str(lines))
+        logger.info('文件%s' % file.filename)
+        logger.info('语言类型%s' % lan)
+        logger.info('是否需要角度%s' % angle)
+        logger.info('是否需要连接%s' % combine)
+        logger.info('只做检测%s' % just_detection)
 
         if angle == 'False':
             angle = False
@@ -88,9 +95,9 @@ class MainHandler(tornado.web.RequestHandler):
             img_buffer = np.asarray(bytearray(file.body), dtype='uint8')
             bytesio = BytesIO(img_buffer)
             img = skimage.io.imread(bytesio)
-            logging.info('io图片完成!')
+            logger.info('io图片完成!')
         except Exception as e:
-            logging.info(str(e), exc_info=True)
+            logger.info(str(e), exc_info=True)
             self.write(self.resp({'code': -2, 'msg': '文件格式错误', 'result': ''}))
             self.finish()
 
@@ -104,8 +111,8 @@ class MainHandler(tornado.web.RequestHandler):
         start = time.time()
         results, img_shape = model(img, lan, angle, combine, lines ,just_detection)
         end = time.time()
-        logging.info('ocr total time %s' % str(end-start))
-        #logging.info(results)
+        logger.info('ocr total time %s' % str(end-start))
+        #logger.info(results)
         self.write(self.resp({'code':0, 'msg': '', 'result': results, 'shape': img_shape}))
 
     def options(self):
