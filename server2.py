@@ -5,6 +5,10 @@ import cv2
 import time
 import json
 import logging
+fmt='%(asctime)s | [%(process)d:%(threadName)s:%(thread)d] | [%(filename)s:%(funcName)s: %(lineno)d] | %(levelname)s | %(message)s'
+logging.basicConfig(filename='ocr-info.log', level=logging.INFO, format=fmt)
+
+
 import traceback
 import skimage.io
 import numpy as np
@@ -31,9 +35,6 @@ define("debug",default=True,help="Debug Mode",type=bool)
 define("port",default=8007,help="run on this port",type=int)
 
 from ocr import model
-
-fmt='%(asctime)s | [%(process)d:%(threadName)s:%(thread)d] | [%(filename)s:%(funcName)s: %(lineno)d] | %(levelname)s | %(message)s'
-logging.basicConfig(filename='ocr-info.log', level=logging.INFO, format=fmt)
 
 class MainHandler(tornado.web.RequestHandler):
     def set_default_headers(self):

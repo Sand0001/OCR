@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import logging
 import numpy as np
 import tensorflow as tf
 from PIL import Image, ImageOps,ImageDraw,ImageFont
@@ -25,9 +26,9 @@ class predict():
         self.chn_model = self.load_model(kwargs.get('chn_model_path'),'chn')
         self.jap_model = self.load_model(kwargs.get('jap_model_path'),'jap')
 
-        self.chn_font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/chn/华文宋体.ttf',36)
-        self.eng_font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/eng/Times New Roman.ttf',36)
-        self.jap_font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/jap/ToppanBunkyuGothicPr6N.ttc', 36)
+        #self.chn_font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/chn/华文宋体.ttf',36)
+        #self.eng_font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/eng/Times New Roman.ttf',36)
+        #self.jap_font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/jap/ToppanBunkyuGothicPr6N.ttc', 36)
 
 
         #self.chn_res_model = self.load_res_model(kwargs.get('chn_res_model_path'),'chn')
@@ -66,9 +67,9 @@ class predict():
                                  model_path)  # weights_eng_finetune_300_finally_resnet-01-1.11.h5
         if os.path.exists(modelPath):
             basemodel.load_weights(modelPath)
-            print('{} shufflenet model loading done'.format(lan))
+            logging.info('s% shufflenet model loading done' %lan)
         else:
-            print('NO {} model exist'.format(lan))
+            logging.info('s% model exist' %lan)
         return basemodel
 
     def gen_rec_img(self,scores,text,lan,picname):
