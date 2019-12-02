@@ -64,6 +64,7 @@ def predict(images,angle = True, combine=False, lines=[]):
     # print(angle)
     lines = [[x1, y1, x2, y2] if y2 > y1 else [x2, y2, x1, y1] for x1, y1, x2, y2 in lines]
     lines =[ [l[0]/scalex/2,l[1]/scaley/2,l[2]/scalex/2,l[3]/scaley/2] for l in lines]
+    degree = 0
     if(angle == False):
         # print("*"*30)
         num_label,labelimage = scale_expand_kernels(newres1,filter=False)
@@ -77,12 +78,12 @@ def predict(images,angle = True, combine=False, lines=[]):
         rects = np.array(rects)
     else:
         #计算角度
-        angle = calc_vote_angle(newres1[-1])
+        degree = calc_vote_angle(newres1[-1])
         num_label,labelimage = scale_expand_kernels(newres1,filter=False)
-        logging.info('pse的角度是%s' %str(angle))
+        logging.info('pse的角度是%s' %str(degree))
         h,w = labelimage.shape[0:2]
-        M = cv2.getRotationMatrix2D((w/2,h/2),angle,1.0)
-        neg_M = cv2.getRotationMatrix2D((w/2,h/2),-angle,1.0)
+        M = cv2.getRotationMatrix2D((w/2,h/2),degree,1.0)
+        neg_M = cv2.getRotationMatrix2D((w/2,h/2),-degree,1.0)
 
         rects = fit_boundingRect_warp_cpp(num_label-1,labelimage,M)
         g = text_porposcal(rects,max_dist=10,threshold_overlap_v=0.5)
@@ -111,7 +112,7 @@ def predict(images,angle = True, combine=False, lines=[]):
         rt[7] = rt[7] * 2 * scaley
         rt[4], rt[6] = rt[6], rt[4]
         rt[5], rt[7] = rt[7], rt[5]
-        rt = np.append(rt, angle)
+        rt = np.append(rt, degree)
         results.append(rt)
     return results
 
