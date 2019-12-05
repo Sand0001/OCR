@@ -1,14 +1,12 @@
 # -*- coding:utf-8 -*-
-import os
-import sys
 import cv2
 import time
-import copy
 import logging
 from math import *
 import numpy as np
-from PIL import Image
 from char_rec.predict import predict
+from char_rec.get_part_img import get_part_img
+from char_rec.utils import dict_add,img_resize,is_valid
 
 '''
 predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
@@ -18,6 +16,7 @@ predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
 			chn_model_path = './char_rec/models/weights_chn_0925_resnet-05-one.h5',
 			jap_model_path = './char_rec/models/weights_jap_add_fonts1015_avg5+6+7.h5')
 '''
+
 predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
                         eng_charset_path='./char_rec/corpus/eng_new.txt',
                         jap_charset_path='./char_rec/corpus/japeng_new1.txt',
@@ -45,14 +44,15 @@ def dumpRotateImage(img, degree, pt1, pt2, pt3, pt4):
     [[pt3[0]], [pt3[1]]] = np.dot(matRotation, np.array([[pt3[0]], [pt3[1]], [1]]))
     ydim, xdim = imgRotation.shape[:2]
     imgOut = imgRotation[max(1, int(pt1[1])) : min(ydim - 1, int(pt3[1])), max(1, int(pt1[0])) : min(xdim - 1, int(pt3[0]))]
-
     return imgOut
+
 def sort_box(box):
     """
     对box进行排序
     """
     box = sorted(box, key=lambda x: x['image'].shape[1],reverse= True)
     return box
+
 def warpAffinePadded(src_h,src_w,M,mode='matrix'):
     '''
     重新计算旋转矩阵，防止cut off image
@@ -99,9 +99,12 @@ def warpAffinePadded(src_h,src_w,M,mode='matrix'):
     padded_h = src_h + (max_y - src_h)  + offset_y
     return offset_M,padded_w,padded_h
 
+
+
 def gen_batch_predict(image_info,lan):
     gen_time = time.time()
     results = []
+    erro_record = {'wrong':0,'all':0}
     batch_image = []
     batch_image_info = []
     image_info_length = len(image_info)
@@ -133,7 +136,6 @@ def gen_batch_predict(image_info,lan):
                         batch_tmp.append(width_t)
                         image_info_b[-j] = 0
                         image_info_b[index] = 0
-
                     if (sum(batch_tmp)+2*(len(batch_tmp)+1)+ width_t_1) > width:
                         break
                 if len(batch_tmp)!= 1:
@@ -151,16 +153,44 @@ def gen_batch_predict(image_info,lan):
                     img = np.array(channel_one, 'f') / 255.0 - 0.5
                     img = np.expand_dims(img, axis=2).swapaxes(0, 1)
                     batch_image.append(img)
-
                     batch_image_info.append(batch_image_info_tmp)
         INFO.gen_batch_time += time.time() - gen_time
-        batch_results = predict.predict_batch_v2(np.array(batch_image), batch_image_info, lan)
+        batch_results,batch_erro_record = predict.predict_batch_v2(np.array(batch_image), batch_image_info, lan)
         results += batch_results
+        erro_record = dict_add(batch_erro_record, erro_record)   #dict 合并相加
         image_info_a = list(filter(None, image_info_b))
         if image_info_a != []:
-            # b = a.copy()
-            results += gen_batch_predict(image_info_a,lan)
-        return results
+            batch_results,batch_erro_record = gen_batch_predict(image_info_a,lan)          # 递归调用
+            results += batch_results
+            erro_record = dict_add(batch_erro_record,erro_record)
+        return results,erro_record
+
+
+def get_image_info(text_recs,rec_trans,img_trans):
+    h,w = img_trans.shape[:2]
+    image_info = []
+    results = []
+    for i in range(len(text_recs)):
+        r = [int(a) for a in rec_trans[i]]
+        he = r[5] - r[1]
+        if he > 50:
+            y_offset = 4
+        else:
+            y_offset = 2
+        partImg = img_trans[max(1, r[1] - y_offset):min(h, r[5] + y_offset), max(1, r[0] - 2):min(w, r[2] + 2)]
+        # if partImg.shape[0] < 1 or partImg.shape[1] < 1 or partImg.shape[0] > 2 * partImg.shape[1]:
+        if partImg.shape[0] < 1 or partImg.shape[1] < 1 or partImg.shape[0] > 3 * partImg.shape[1]:
+            results.append({'location': [int(i) for i in text_recs[i]], 'text': '', 'scores': [0.0]})
+            continue
+
+        pic_info = {}
+        pic_info['location'] = [int(a) for a in text_recs[i]]
+        # logging.info('排序前')
+        # logging.info(pic_info['location'])
+        image = img_resize(partImg)
+        pic_info['image'] = image
+        image_info.append(pic_info)
+    return image_info,results
 
 def charRec(lan, img, text_recs, angle):
     '''
@@ -183,83 +213,28 @@ def charRec(lan, img, text_recs, angle):
     else:
         img_trans = img
         rec_trans = text_recs
-
-    results = []
-    image_info = []
-    for i in range(len(text_recs)):
-        r = [int(a) for a in rec_trans[i]]
-        he = r[5] - r[1]
-        if he > 50:
-            y_offset = 4
-        else:
-            y_offset = 2
-        partImg = img_trans[max(1, r[1]-y_offset):min(h, r[5]+y_offset), max(1, r[0]-2):min(w, r[2]+2)]
-        # if partImg.shape[0] < 1 or partImg.shape[1] < 1 or partImg.shape[0] > 2 * partImg.shape[1]:
-        if partImg.shape[0] < 1 or partImg.shape[1] < 1 or partImg.shape[0] > 3 * partImg.shape[1]:
-            results.append({'location':[int(i) for i in text_recs[i]], 'text': '', 'scores':[0.0]})
-            continue
-        image = cv2.cvtColor(partImg,cv2.COLOR_BGR2GRAY)
-        pic_info = {}
-        pic_info['location'] = [int(a) for a in text_recs[i]]
-        #logging.info('排序前')
-        #logging.info(pic_info['location'])
-        width, height = image.shape[1], image.shape[0]
-        scale = height * 1.0 / 32
-        width = int(width / scale)
-        image = cv2.resize(image,(width, 32))
-        pic_info['image'] = image
-        image_info.append(pic_info)
+    # 使用预处理返回图片信息
+    t0_1 = time.time()
+    image_info  = get_part_img.get_image_info_with_pre_post(text_recs, rec_trans, img_trans)  # 如果不符合的图片直接不返回了
     t1 = time.time()
     image_info = sort_box(image_info)
+    logging.info('获取partimg 时间：%s' %str(t1-t0_1))
     logging.info('排序时间：%s' %str(time.time() - t1))
     logging.info('预处理时间: %s' %str(time.time() - t0))
     logging.info('gen batch 时间: %s' % str(INFO.gen_batch_time))
     INFO.gen_batch_time = 0
     logging.info('检测框数量  %s' %str(len(image_info)))
-    results = gen_batch_predict(image_info, lan)
+    results,erro_record = gen_batch_predict(image_info, lan)
     logging.info('返回结果数量  %s' % str(len(results)))
-
-    '''
-    # 对于竖文本进行切分
-    if partImg.shape[0] > 2 * partImg.shape[1]:
-        img_copy = copy.deepcopy(np.array(image)) 
-        part_points = split_str(img_copy)
-        points_num = len(part_points)
-        if points_num > 2:
-            for i in range(0, points_num-1):
-                part_img = img_copy[part_points[i]:part_points[i+1], :]
-                if part_img.shape[0] > 2 * part_img.shape[1]:
-                    continue
-                else:
-                    part_img = Image.fromarray(part_img)
-                    text, scores = keras_densenet(part_img)
-                    if len(scores) == 0:
-                        continue
-                    avg_score = sum([float(j) for j in scores])/len(scores)
-                    box = copy.deepcopy([int(j) for j in text_recs[i]])
-                    # box = [int(j) for j in text_recs[i]]
-                    logging.info(str(box))
-                    box[1] += part_points[i]
-                    box[3] += part_points[i]
-                    box[5] += part_points[i+1]
-                    box[7] += part_points[i+1]
-                    logging.info(str(box))
-
-                    if len(text) > 0 and avg_score>0.6:
-                        results.append({'location': box, 'text': text, 'scores': scores})  # 识别
-                    else:
-                        results.append({'location': box, 'text': '', 'scores': [0.0]})  # 识别文字 
-        continue 
-    '''
+    #logging.info('img is valid ? %s' %str(is_valid(erro_record)))
+    #print('img is valid ?', is_valid(erro_record))
 
     logging.info('predict 耗时：%s' %str(predict.predict_time))
     predict.predict_time = 0
     logging.info('decode 耗时：%s' %str(predict.decode_time))
     predict.decode_time = 0
-    #logging.info('resnet predict 耗时：%s' %str(predict.res_predict_time))
-    #predict.res_predict_time = 0
-    return results
 
+    return results if is_valid(erro_record) else []
 
 
 

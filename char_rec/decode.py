@@ -1,9 +1,9 @@
-import itertools
-import json
 import re
-import logging
-import numpy as np
+import json
 import pickle
+import logging
+import itertools
+import numpy as np
 
 
 
@@ -29,7 +29,7 @@ class decode_ctc():
             self.lfreq_chn_word = json.loads(lfreq_chn_word_file.read())  #
             logging.info(' chn word file lodding done')
             self.lfreq_jap_word = json.loads(lfreq_jap_word_file.read())
-            logging.info('jap word file lodding done')
+            logging.info(' jap word file lodding done')
         self.k = k
 
         self.gamma = 2 # 发射概率的阈值
@@ -37,6 +37,10 @@ class decode_ctc():
         self .Easily_confused_word = {'径':{'真径':'直径'}}
         self.Easily_confused = ['人','入']
         self.wrong_char_num = 5
+
+        self.characters_num_per_paper = 0  # 统计一整页文字有多少个
+        self.wrong_characters_num_per_paper = 0  # 统计一整页文字有多少个是概率不确定的
+
 
     @staticmethod
     def init_char_set(file_path, ):
@@ -206,7 +210,8 @@ class decode_ctc():
             text,score_list = decode_ctc.strQ2B(text, score_list)
         text = text.replace('▿', ' ')
         text = text.replace('▵', '　')
-        return text, [str(ele) for ele in score_list]
+        erro_record = self.count_error_characters(score_list)
+        return text, [str(ele) for ele in score_list],erro_record
 
     def char_in_Easily_confused_word(self,s1, s2):
 
@@ -215,6 +220,9 @@ class decode_ctc():
             # print('转换前', s1 + s2)
             # print('转换后', Easily_confused_word[s2][s1 + s2])
             return self.Easily_confused_word[s2][s1 + s2]
+    def count_error_characters(self,final_score):
+        return {'wrong_characters_num':len(np.where(np.array(final_score)<0.6)[0]),'characters_num':len(final_score)}
+
     def decode_chn_eng(self,pred,lan,char_set):
         nclass = len(char_set)
         #print(pred.shape)
@@ -233,6 +241,7 @@ class decode_ctc():
                 max_score = pred[i][pred_text[i]]
                 pred[i][pred_text[i]] = 0
                 char = char_set[pred_text[i]]
+                self.characters_num_per_paper += 1    # 统计一整页文字有多少个
                 if decode_ctc.isalpha(char):
                     if max_score < 0.9 and  len(wrong_charindex_list) < self.wrong_char_num : # 限制错误字符的个数 如果超过三个 这一步也不计算第二个字符了
                         wrong_charindex_list.append(wrong_charindex)  # 嫌疑字index列表
@@ -332,8 +341,6 @@ class decode_ctc():
         word_bigram_score_list = []
         score_list_final = []
         if len(paths) > 1:
-            # print('rrrrr')
-
             for path in paths:
                 word_bigram_score_path = []
                 #get_word_bigram_score(path)
@@ -352,47 +359,34 @@ class decode_ctc():
                     else:
                         if path[j] != '卍':
                             word_bigram_score_path += [word_list[j][path[j]]['score']]  # 获得每个path中每个字符分数列表
-                        # else:
-                        #     print('j')
-
-                #print('path', path, 'score', word_bigram_score * p_pred ** gamma, 'bigram', word_bigram_score)
-
                 word_bigram_score_list.append(word_bigram_score * p_pred ** self.gamma) if len(
                     path) > 2 else word_bigram_score_list.append(p_pred)  #
                 score_list_final.append(word_bigram_score_path)
             max_score_index = np.argmax(np.array(word_bigram_score_list), axis=0)
-            # print(''.join(paths[max_score_index]))
             final_score = score_list_final[max_score_index]
             final_text = ''.join(paths[max_score_index]).replace('卍', '')
-            # assert len(final_text)-final_text.count('▵') - final_text.count('▿') == len(final_score)
             if lan.upper() == 'CHN':
                 final_text, final_score = decode_ctc.strQ2B(final_text, final_score)
             final_text = final_text.replace('▿', ' ')
             final_text = final_text.replace('▵', '　')
-            return final_text, final_score
-            # return None,None
+            erro_record = self.count_error_characters(final_score)
+            return final_text, final_score,erro_record
         elif len(paths) == 1:
-            # score_list_final = []
             path = list(paths[0])
             for j in range(len(path)):
                 if 'score_list' in word_list[j][path[j]]:
-                    # try:
                     score_list_final += word_list[j][path[j]]['score_list']
                 else:
-                    # try:
+
                     score_list_final.append(word_list[j][path[j]]['score'])
-                    # except:
-                    #    print('word_list[j][path[j]]',word_list[j][path[j]])
             final_text = ''.join(list(paths[0]))
-            # assert len(final_text)-final_text.count('▵') - final_text.count('▿') == len(score_list_final)
             final_score = score_list_final
             if lan.upper() == 'CHN':
                 final_text, final_score = decode_ctc.strQ2B(final_text, score_list_final)
             strQ2B_text = final_text.replace('▿', ' ')
-
             strQ2B_text = strQ2B_text.replace('▵', '　')
-
-            return strQ2B_text, final_score  # ,score_list     ###score  等下再拿出来
+            erro_record = self.count_error_characters(final_score)
+            return strQ2B_text, final_score,erro_record  # ,score_list     ###score  等下再拿出来
 
 
 if __name__ == '__main__':
@@ -417,7 +411,7 @@ if __name__ == '__main__':
     Time0 = 0
     Time1 = 0
     num = 0
-    for npy in npyList[35:36]:
+    for npy in npyList:
         if 'npy' in npy:
             num += 1
             print(num)
