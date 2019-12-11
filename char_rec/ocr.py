@@ -20,7 +20,7 @@ predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
 predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
                         eng_charset_path='./char_rec/corpus/eng_new.txt',
                         jap_charset_path='./char_rec/corpus/japeng_new1.txt',
-                        eng_model_path = './char_rec/models/weights_eng_add_fonts1018_shufflenet_chage_lr2-avg2+3+4.h5',
+                        eng_model_path = './char_rec/models/weights_eng_script_change_pos_1209_big_shufflenet_01-04-one.h5',
                         chn_model_path = './char_rec/models/weights_chn_1103_seal_bg_fg_shufflenet_change_lr01-02-one.h5',
                         jap_model_path = './char_rec/models/weights_jap_1101_shufflenet_change_lr01-avg1+2+3.h5',
                         chn_res_model_path = './char_rec/models/weights_chn_0925_resnet-05-one.h5')
