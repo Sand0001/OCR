@@ -1,7 +1,6 @@
 import os
 import json
 import time
-import logging
 import numpy as np
 import tensorflow as tf
 from PIL import Image, ImageOps,ImageDraw,ImageFont
@@ -26,13 +25,10 @@ class predict():
         self.chn_model = self.load_model(kwargs.get('chn_model_path'),'chn')
         self.jap_model = self.load_model(kwargs.get('jap_model_path'),'jap')
 
-        #self.chn_font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/chn/华文宋体.ttf',36)
-        #self.eng_font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/eng/Times New Roman.ttf',36)
-        #self.jap_font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/jap/ToppanBunkyuGothicPr6N.ttc', 36)
 
-
-        #self.chn_res_model = self.load_res_model(kwargs.get('chn_res_model_path'),'chn')
-        #self.res_predict_time = 0
+        # self.chn_font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/chn/华文宋体.ttf',36)
+        # self.eng_font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/eng/Times New Roman.ttf',36)
+        # self.jap_font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/jap/ToppanBunkyuGothicPr6N.ttc', 36)
 
         self.predict_time = 0
         self.decode_time = 0
@@ -67,22 +63,23 @@ class predict():
                                  model_path)  # weights_eng_finetune_300_finally_resnet-01-1.11.h5
         if os.path.exists(modelPath):
             basemodel.load_weights(modelPath)
-            logging.info('s% shufflenet model loading done' %lan)
+            print('{} shufflenet model loading done'.format(lan))
         else:
-            logging.info('s% model exist' %lan)
+            print('NO {} model exist'.format(lan))
         return basemodel
 
     def gen_rec_img(self,scores,text,lan,picname):
         if lan.upper() == 'JAP' or lan.upper() =='JPE' :
-            font = self.jap_font
+            font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/jap/ToppanBunkyuGothicPr6N.ttc', 36)
+
 
         elif lan.upper() == 'CHN' :
-            font = self.chn_font
+            font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/chn/华文宋体.ttf',36)
 
         elif lan.upper() == 'ENG' :
-            font = self.eng_font
+            font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/eng/Times New Roman.ttf',36)
         else:
-            font = self.chn_font
+            font = ImageFont.truetype('/data/fengjing/ocr_recognition_test/fonts/chn/华文宋体.ttf',36)
 
         width = font.getsize(text)[0]
         im = Image.new("RGB", (width + 20, 46), (255, 255, 255))
@@ -135,7 +132,7 @@ class predict():
             try:
                 text, scores = decode_ctc.decode_chn_eng(y_pred[i], lan, char_set)
             except:
-                text, scores = decode_ctc.decode_ori(y_pred[i])
+                text, scores = decode_ctc.decode_ori(y_pred[i],lan,char_set)
             self.decode_time += time.time() - b
             imagename = {}
             imagename['location'] = image_info[i]['location']
@@ -144,7 +141,7 @@ class predict():
             result_info.append(imagename)
         return result_info
 
-    def get_json_path(self,lan):
+    def get_json_path(self,lan):   # fengjing test 服务用的
         if lan == 'JPE':
             json_label_path = '/data/fengjing/ocr_recognition_test/label_json_jap/'
         elif lan.upper() == 'CHN':
@@ -156,6 +153,7 @@ class predict():
         return json_label_path
 
     def predict_batch_test(self,img, image_info,lan):
+        erro_record_batch = {"wrong": 0, 'all': 0}
         basemodel, char_set = self.get_basemodel(lan)
 
         a = time.time()
@@ -169,13 +167,14 @@ class predict():
             b = time.time()
             y_pred_1 = y_pred[i].copy()
             try:
-               text, scores = decode_ctc.decode_chn_eng(y_pred[i],lan,char_set)
+               text, scores,erro_record = decode_ctc.decode_chn_eng(y_pred[i],lan,char_set)
             except:
-               text, scores = decode_ctc.decode_ori(y_pred[i],char_set,lan)
+               text, scores,erro_record = decode_ctc.decode_ori(y_pred[i],char_set,lan)
 
             self.decode_time += time.time() - b
-            text_ori, scores_ori = decode_ctc.decode_ori(y_pred_1, char_set, lan)
-
+            text_ori, scores_ori,erro_record = decode_ctc.decode_ori(y_pred_1, char_set, lan)
+            erro_record_batch['wrong'] += erro_record['wrong_characters_num']
+            erro_record_batch['all'] += erro_record['characters_num']
             text = text.replace('　','▵')
             text = text.replace(' ','▿')
 
@@ -195,8 +194,8 @@ class predict():
             little_pic_json_file = image_info[i]['picname'][:-4]+'.json'
             label_data = {'imgurl':'http://39.104.88.168/image_rec/'+ image_info[i]['picname'],'text':text,'is_save':'true'}
             json_label_path = self.get_json_path(lan)
-            with open(json_label_path+little_pic_json_file,'w') as f:
-                json.dump(label_data,f)
+            # with open(json_label_path+little_pic_json_file,'w') as f:
+            #     json.dump(label_data,f)
             if text_ori != text:
                 label_and_rec_text['label'] = text_ori
             try:
@@ -204,7 +203,8 @@ class predict():
             except:
                 continue
             result_info.append(imagename)
-        return result_info
+        print('erro_record_batch',erro_record_batch)
+        return result_info, erro_record_batch
 
     def predict_batch_v2(self,img, image_info,lan):
 
@@ -215,6 +215,7 @@ class predict():
             y_pred = basemodel.predict_on_batch(img)[:, 2:, :]
         self.predict_time += time.time() - a
         result_info = []
+        erro_record_batch = {"wrong":0,'all':0}
         # logging.info('chn batch')
         for i in range(len(y_pred)):
             width = 0
@@ -223,9 +224,9 @@ class predict():
                 b = time.time()
                 slice_width = width+slice_img['image'].shape[1]+2
                 try:
-                   text, scores = decode_ctc.decode_chn_eng(y_pred[i][width//4:slice_width//4],lan,char_set)
+                   text, scores,erro_record = decode_ctc.decode_chn_eng(y_pred[i][width//4:slice_width//4],lan,char_set)
                 except:
-                   text, scores = decode_ctc.decode_ori(y_pred[i][width//4:slice_width//4])
+                   text, scores,erro_record = decode_ctc.decode_ori(y_pred[i][width//4:slice_width//4],lan,char_set)
                 self.decode_time += time.time() - b
                 width += slice_width
                 imagename = {}
@@ -233,9 +234,8 @@ class predict():
                 imagename['text'] = text
                 imagename['scores'] = [str(ele) for ele in scores]
                 result_info.append(imagename)
-
-
-
-        return result_info
+                erro_record_batch['wrong'] += erro_record['wrong_characters_num']
+                erro_record_batch['all'] += erro_record['characters_num']
+        return result_info,erro_record_batch
 if __name__ == '__main__':
     predict = predict()
