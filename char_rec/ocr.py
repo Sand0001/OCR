@@ -22,8 +22,8 @@ predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
                         jap_charset_path='./char_rec/corpus/japeng.txt',
                         eng_model_path = './char_rec/models/weights_eng_script_1_129_shufflenet-05-one.h5',
                         chn_model_path = './char_rec/models/weights_chn_script_0131_shufflenet-lr-03-1-one.h5',
-                        #jap_model_path = './char_rec/models/weights_jap_1101_shufflenet_change_lr01-avg1+2+3.h5',
-                        jap_model_path = './char_rec/models/weights_jap_script_0210_shufflenet-12-one.h5',
+                        jap_model_path = './char_rec/models/weights_jap_script_change_pos_1217_shufflenet_1-03-one.h5',
+                        #jap_model_path = './char_rec/models/weights_jap_script_0210_shufflenet-12-one.h5',
                         chn_res_model_path = './char_rec/models/weights_chn_0925_resnet-05-one.h5')
 
 class INFO():
@@ -257,7 +257,6 @@ def charRec(lan, img, text_recs, angle):
     h, w = img.shape[:2]
     img_pre_rec = img.copy()
     text_recs = box_pre(text_recs, img_pre_rec)
-
     if angle:
         angle = text_recs[0][-1]
         rec = np.array(text_recs)[:,:-1].reshape(-1, 4, 2)
