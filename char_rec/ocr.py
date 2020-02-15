@@ -193,6 +193,58 @@ def get_image_info(text_recs,rec_trans,img_trans):
         image_info.append(pic_info)
     return image_info,results
 
+def split(data):
+    start_i = -1
+    end_i = -1
+    rowPairs = []
+    height,width = data.shape[:2]
+    min_val = 5  #最小字的高度
+    for i in range(height):
+        if (not data[i].all() )and (start_i < 0):   #判断是否有黑点
+            start_i = i
+        elif (not data[i].all()):
+            end_i = i
+        elif (data[i].all() and start_i >= 0 and end_i >=0 and end_i-start_i>5):
+            if (end_i - start_i >= min_val):
+                rowPairs.append([start_i, end_i])
+                start_i, end_i = -1, -1
+    if end_i-start_i >= min_val and [start_i, end_i] not in rowPairs:   #防止漏掉
+        rowPairs.append([start_i, end_i])
+    return rowPairs
+
+def box_pre(box_list,img):
+    new_box_list = []
+    for box in box_list:
+        width_list = [int(box[i]) for i in range(len(box[:-1])) if i %2 == 0]
+        height_list = [int(box[i]) for i in range(len(box[:-1])) if i %2 == 1]
+        width = max(width_list)-min(width_list)
+        height = max(height_list)-min(height_list)
+        if width*1.7 <height:
+            img_crop = img[min(height_list):max(height_list),min(width_list):max(width_list)]
+
+            img_crop_binary = cv2.cvtColor(img_crop,cv2.COLOR_BGR2GRAY)
+            # threth = find_binary_threth(img_crop_binary)
+            threth = 128
+            if threth :
+                img_crop_binary[img_crop_binary<threth] = 0
+                img_crop_binary[img_crop_binary>threth] = 255
+                split_points  = split(img_crop_binary)
+                if split_points ==[]:
+                    new_box_list.append(box)
+                    continue
+                for index,point in enumerate(split_points):
+                    start = point[0]
+                    end = point[1]
+                    start_ori = min(height_list)+start
+                    end_ori = min(height_list)+end
+                    new_box = [box[0],start_ori,box[2],start_ori,box[4],end_ori,box[6],end_ori,box[8]]
+                    new_box_list.append(new_box)
+        else:
+            new_box_list.append(box)
+    return new_box_list
+
+
+
 def charRec(lan, img, text_recs, angle):
     '''
     lan:语言参数CHE中英；JPE英日；ENG纯英
@@ -203,6 +255,9 @@ def charRec(lan, img, text_recs, angle):
     t0 = time.time()
     xDim, yDim = img.shape[1], img.shape[0]
     h, w = img.shape[:2]
+    img_pre_rec = img.copy()
+    text_recs = box_pre(text_recs, img_pre_rec)
+
     if angle:
         angle = text_recs[0][-1]
         rec = np.array(text_recs)[:,:-1].reshape(-1, 4, 2)
