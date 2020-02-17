@@ -22,8 +22,8 @@ predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
                         jap_charset_path='./char_rec/corpus/japeng.txt',
                         eng_model_path = './char_rec/models/weights_eng_script_1_129_shufflenet-05-one.h5',
                         chn_model_path = './char_rec/models/weights_chn_script_0131_shufflenet-lr-03-1-one.h5',
+                        #jap_model_path = './char_rec/models/weights_jap_1101_shufflenet_change_lr01-avg1+2+3.h5',
                         jap_model_path = './char_rec/models/weights_jap_script_change_pos_1217_shufflenet_1-03-one.h5',
-                        #jap_model_path = './char_rec/models/weights_jap_script_0210_shufflenet-12-one.h5',
                         chn_res_model_path = './char_rec/models/weights_chn_0925_resnet-05-one.h5')
 
 class INFO():
@@ -114,6 +114,7 @@ def gen_batch_predict(image_info,lan):
         width = image_info[0]['image'].shape[1]
         for index, image1 in enumerate(image_info):
             image = image1['image']
+
             min_width = width - 20
             if image.shape[1] > min_width:
                 channel_one = np.pad(image, ((0, 0), (0, width - image.shape[1])), 'constant',
@@ -197,20 +198,50 @@ def split(data):
     start_i = -1
     end_i = -1
     rowPairs = []
+    distance_list = []
     height,width = data.shape[:2]
+    num_char = round(height/width) #先大致算有几个数
     min_val = 5  #最小字的高度
+    start_cor = False
     for i in range(height):
         if (not data[i].all() )and (start_i < 0):   #判断是否有黑点
             start_i = i
+            if start_cor:
+                distance_list.append(start_i -start_cor)
+                start_cor = False
         elif (not data[i].all()):
             end_i = i
         elif (data[i].all() and start_i >= 0 and end_i >=0 and end_i-start_i>5):
             if (end_i - start_i >= min_val):
                 rowPairs.append([start_i, end_i])
+                start_cor = end_i
                 start_i, end_i = -1, -1
     if end_i-start_i >= min_val and [start_i, end_i] not in rowPairs:   #防止漏掉
         rowPairs.append([start_i, end_i])
-    return rowPairs
+    distance_list = sorted(distance_list,reverse=True)  #
+    if len(distance_list)+1> num_char:
+        distance_list = distance_list[:num_char-1]
+    if distance_list:
+        min_distance = min(distance_list)
+    else:
+        min_distance = 0
+    new_row_pairs = []
+    if len(rowPairs)>num_char:
+        new_start = rowPairs[0][0]
+        new_end = rowPairs[0][1]
+        for i in range(0, len(rowPairs)):
+            if rowPairs[i][0] - new_end < min_distance and (
+                    rowPairs[i][1] - new_start) / width < 1.3:  # TODO 这个1.3也是需要调整 不安全
+                new_end = rowPairs[i][1]
+            else:
+                new_row_pairs.append([new_start, new_end])
+                new_start, new_end = rowPairs[i]
+        if rowPairs[-1][1] != new_row_pairs[-1][1]:
+            new_row_pairs.append([new_start, new_end])
+    else:
+        new_row_pairs = rowPairs
+    return new_row_pairs
+
 
 def box_pre(box_list,img):
     new_box_list = []
