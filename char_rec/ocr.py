@@ -246,32 +246,37 @@ def split(data):
 def box_pre(box_list,img):
     new_box_list = []
     for box in box_list:
-        width_list = [int(box[i]) for i in range(len(box[:-1])) if i %2 == 0]
-        height_list = [int(box[i]) for i in range(len(box[:-1])) if i %2 == 1]
-        width = max(width_list)-min(width_list)
-        height = max(height_list)-min(height_list)
-        if width*1.7 <height:
-            img_crop = img[min(height_list):max(height_list),min(width_list):max(width_list)]
+        try:
+            width_list = [int(box[i]) for i in range(len(box[:-1])) if i %2 == 0]
+            height_list = [int(box[i]) for i in range(len(box[:-1])) if i %2 == 1]
+            width = max(width_list)-min(width_list)
+            height = max(height_list)-min(height_list)
+            if width*1.7 <height:
+                img_crop = img[min(height_list):max(height_list),min(width_list):max(width_list)]
 
-            img_crop_binary = cv2.cvtColor(img_crop,cv2.COLOR_BGR2GRAY)
-            # threth = find_binary_threth(img_crop_binary)
-            threth = 128
-            if threth :
-                img_crop_binary[img_crop_binary<threth] = 0
-                img_crop_binary[img_crop_binary>threth] = 255
-                split_points  = split(img_crop_binary)
-                if split_points ==[]:
-                    new_box_list.append(box)
-                    continue
-                for index,point in enumerate(split_points):
-                    start = point[0]
-                    end = point[1]
-                    start_ori = min(height_list)+start
-                    end_ori = min(height_list)+end
-                    new_box = [box[0],start_ori,box[2],start_ori,box[4],end_ori,box[6],end_ori,box[8]]
-                    new_box_list.append(new_box)
-        else:
+                img_crop_binary = cv2.cvtColor(img_crop,cv2.COLOR_BGR2GRAY)
+                # threth = find_binary_threth(img_crop_binary)
+                threth = 128
+                if threth :
+                    img_crop_binary[img_crop_binary<threth] = 0
+                    img_crop_binary[img_crop_binary>threth] = 255
+                    split_points  = split(img_crop_binary)
+                    if split_points ==[]:
+                        new_box_list.append(box)
+                        continue
+                    for index,point in enumerate(split_points):
+                        start = point[0]
+                        end = point[1]
+                        start_ori = min(height_list)+start
+                        end_ori = min(height_list)+end
+                        new_box = [box[0],start_ori,box[2],start_ori,box[4],end_ori,box[6],end_ori,box[8]]
+                        new_box_list.append(new_box)
+            else:
+                new_box_list.append(box)
+        except Exception as e:
+            print(e)
             new_box_list.append(box)
+
     return new_box_list
 
 
