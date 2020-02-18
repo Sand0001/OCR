@@ -24,6 +24,7 @@ predict = predict(chn_charset_path ='./char_rec/corpus/chn.txt',
                         chn_model_path = './char_rec/models/weights_chn_script_0131_shufflenet-lr-03-1-one.h5',
                         #jap_model_path = './char_rec/models/weights_jap_1101_shufflenet_change_lr01-avg1+2+3.h5',
                         jap_model_path = './char_rec/models/weights_jap_script_change_pos_1217_shufflenet_1-03-one.h5',
+                        jap_model_path = './char_rec/models/weights_jap_checkbox_0218_shufflenet-02-one.h5',
                         chn_res_model_path = './char_rec/models/weights_chn_0925_resnet-05-one.h5')
 
 class INFO():
