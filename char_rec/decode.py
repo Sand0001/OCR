@@ -437,7 +437,8 @@ class decode_ctc():
                 logging.info('纠错 {} -> {}'.format(text,newtext))
                 text = newtext
                 break
-            text = newtext
+            else:
+                logging.info('未纠错 {}'.format(text))
         return text 
 
 if __name__ == '__main__':
