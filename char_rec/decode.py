@@ -7,7 +7,6 @@ import numpy as np
 
 
 
-
 def file_len(path):
     """
     :param file_path:
@@ -27,6 +26,7 @@ class decode_ctc():
             self.word_dict = pickle.load(pkl_file)
             self.word_dict['fl'] = 1
             self.word_dict['pdw'] = 1
+            self.word_dict['cre'] = 1
             self.lfreq_chn_word = json.loads(lfreq_chn_word_file.read())  #
             logging.info(' chn word file lodding done')
             self.lfreq_jap_word = json.loads(lfreq_jap_word_file.read())
@@ -94,6 +94,20 @@ class decode_ctc():
     def is_chinese(word):
         for ch in word:
             if '\u4e00' <= ch <= '\u9fff':
+                return True
+        return False
+    def is_jap(self,word):
+        jap_num = 0
+        for ch in word:
+            # if '\u0800' <= ch <= '\u4e00':
+            #    jap_num += 1
+            if '\u3040' <= ch <= '\u309F':  # Hiragana
+                return True
+            if '\u30A0' <= ch <= '\u30FF':  # Katakana
+                return True
+            # 与汉字重叠了，只看片假名吧
+            if '\u4E00' <= ch <= '\u9FBF': #Kanji
+            # jap_num += 1
                 return True
         return False
 
@@ -295,7 +309,9 @@ class decode_ctc():
                 if decode_ctc.isalpha(char):  #如果是字母
                     if max_score < 0.9 and  len(wrong_charindex_list) < self.wrong_char_num : # 限制错误字符的个数 如果超过三个 这一步也不计算第二个字符了
                         wrong_charindex_list.append(wrong_charindex)  # 嫌疑字index列表
+
                         second_char_index = pred[i].argmax(axis=0)
+
                         text_tmp_list.append({char: {'score': max_score},
                                               char_set[second_char_index]: {'score': pred[i][second_char_index]}})
                     else:
@@ -309,11 +325,11 @@ class decode_ctc():
                         second_char_index = pred[i].argmax(axis=0)
                         second_char = char_set[second_char_index]
                         if decode_ctc.isalpha(second_char) and len(wrong_charindex_list) <self.wrong_char_num and ('▵' not in char) and (
-                                '▿' not in char):
+                                '▿' not in char):#  如果第二个字符是字母
                             wrong_charindex_list.append(wrong_charindex+1)
                             text_tmp += char
                             score_list_tmp.append(max_score)
-                            if second_char != '卍':
+                            if second_char != '卍' and second_char != ' ':
                                 text_tmp_list.append(
                                     {char: {'score': max_score}, second_char: {'score': pred[i][second_char_index]}})
                             else:
@@ -363,10 +379,10 @@ class decode_ctc():
                                 word_list[-1].pop(s1)  # 将原字符删除掉
                         word_list.append({char: {'score': max_score}})
                     elif ((char in self.Easily_confused_hard and max_score < 0.95) or (max_score < 0.6 and ('▵' not in char) and ('▿' not in char))) \
-                            and len(wrong_word_index_list) < self.wrong_char_num :  # 如果字符是易混淆字符且概率小于0。95 或者最大值小于0。6
+                            and len(wrong_word_index_list) < self.wrong_char_num and self.is_jap(char):  # 如果字符是易混淆字符且概率小于0。95 或者最大值小于0。6
                         wrong_word_index_list.append(0)
                         second_char_index = pred[i].argmax(axis=0)  # 这里备用字符不做是否占位符的判断
-                        if second_char_index != nclass - 1:
+                        if second_char_index != nclass - 1 and second_char_index != 0:
                             second_char = char_set[second_char_index]
                             char = {char: {'score': max_score}, second_char: {'score': pred[i][second_char_index]}}
                         else:
@@ -420,11 +436,13 @@ if __name__ == '__main__':
     Time1 = 0
     num = 0
     for npy in npyList:
-        if 'npy' in npy:
+        # if 'npy' in npy:
+        if npy.endswith('npy'):
             num += 1
             # print(num)
             preds = np.load(os.path.join(npyPath, npy))
-            #preds = np.load('/fengjing/test_img/1.npy')1582785234.6443508.npy'
+            # preds = np.load(os.path.join(npyPath, '1582801674.5322697.npy'))
+            # preds = np.load('/fengjing/test_img/1.npy')1582785234.6443508.npy'
             # print(preds.shape)
             for i in range(len(preds)):
                 pred = preds[i]
@@ -460,7 +478,7 @@ if __name__ == '__main__':
                 d = time.time()
                 Time1 = Time1 + d - c
                 #print('ctc decode time', d - c)
-                # break
+            #     break
             # break
     print('加后处理 总时间', Time0)
     print('不加后处理总时间', Time1)
