@@ -434,6 +434,7 @@ class decode_ctc():
         for k, v in self.look_up_table.items():
             newtext = text.replace(k, v)
             if(newtext!=text): #一旦命中字典则不再往下遍历
+                logging.info('纠错 {} -> {}'.format(text,newtext))
                 text = newtext
                 break
             text = newtext
