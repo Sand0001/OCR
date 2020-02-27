@@ -38,9 +38,21 @@ class decode_ctc():
         self.easy_confused_gamma = 1
         self.easy_confused_alpha = 1
 
-        self .Easily_confused_word = {'径':{'真径':'直径'}}
+        self.Easily_confused_word = {'径':{'真径':'直径'}}
         self.Easily_confused_hard = ['人','入']
         self.Easily_confused = []
+
+        #词库替换
+        self.look_up_table = {
+                                'Lanvatinib':'Lenvatinib',
+                                'ジャスビア錠':'ジャヌビア錠',
+                                'ピップロロールフマ':'ビソプロロールフマ',
+                                '果急入院':'緊急入院',
+                                '尿識':'尿量',
+                                'レンバテニブ':'レンバチニブ',
+                                '急性管腸炎':'急性胃腸炎'
+                                }
+
         self.wrong_char_num = 5
 
         self.characters_num_per_paper = 0  # 统计一整页文字有多少个
@@ -408,10 +420,22 @@ class decode_ctc():
             erro_record = self.count_error_characters(final_score)
             return final_text, final_score,erro_record
         elif len(paths) == 1:
-            strQ2B_text,final_score = self.get_one_path_text( paths, lan, word_list)
+            final_text,final_score = self.get_one_path_text( paths, lan, word_list)
             erro_record = self.count_error_characters(final_score)
-            return strQ2B_text, final_score,erro_record  # ,score_list     ###score  等下再拿出来
 
+        ### 词库替换
+        final_text = self.replace_look_up_table(final_text)
+
+        return final_text, final_score,erro_record  # ,score_list     ###score  等下再拿出来
+
+    def replace_look_up_table(self,text):
+        '''根据替换字典，替换
+        '''
+        for k, v in self.look_up_table.items():
+            newtext = text.replace(k, v)
+            if(newtext!=text): #一旦命中字典则不再往下遍历
+                break
+        return text 
 
 if __name__ == '__main__':
     import os, time
