@@ -129,6 +129,8 @@ class get_part_img():
     def crop_part(img,r,extend_height,extend_width,h,w):
         partImg = img[max(1, r[1] - extend_height):min(h, r[5] + extend_height),  # crop
                   max(1, r[0] - extend_width):min(w, r[2] + extend_width)]
+        a = time.time()
+        cv2.imwrite('/data/fengjing/ocr_recognition_server/i/'+str(a)+'.jpg',partImg)
         return partImg
 
     @staticmethod
@@ -137,8 +139,8 @@ class get_part_img():
         h, w = img.shape[:2]
 
         img_blank = get_part_img.get_img_blank(rec_trans,img)
-        max_extend_height = 4
-        max_extend_width = 3
+        max_extend_height = 0
+        max_extend_width = 0
         for index, box in enumerate(rec_trans):
             r = [int(a) for a in box]
             extend_height = get_part_img.find_extend_height(max_extend_height,r,img_blank,index)
