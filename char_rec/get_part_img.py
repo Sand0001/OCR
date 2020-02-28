@@ -139,8 +139,8 @@ class get_part_img():
         h, w = img.shape[:2]
 
         img_blank = get_part_img.get_img_blank(rec_trans,img)
-        max_extend_height = 0
-        max_extend_width = 0
+        max_extend_height = 4
+        max_extend_width = 2
         for index, box in enumerate(rec_trans):
             r = [int(a) for a in box]
             extend_height = get_part_img.find_extend_height(max_extend_height,r,img_blank,index)
