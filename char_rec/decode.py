@@ -45,12 +45,13 @@ class decode_ctc():
         #词库替换
         self.look_up_table = {
                                 'Lanvatinib':'Lenvatinib',
-                                'ジャスビア錠':'ジャヌビア錠',
-                                'ピップロロールフマ':'ビソプロロールフマ',
+                                'ジャスビア錠':'ジャヌビア錠',
+                                'ピップロロールフマ':'ビソプロロールフマ',
                                 '果急入院':'緊急入院',
-                                '尿識':'尿量',
-                                'レンバテニブ':'レンバチニブ',
-                                '急性管腸炎':'急性胃腸炎'
+                                '尿識およ':'尿量およ',
+                                'レンバテニブ':'レンバチニブ',
+                                '急性管腸炎':'急性胃腸炎',
+                                '急性背腸炎':'急性胃腸炎',
                                 }
 
         self.wrong_char_num = 5
@@ -418,7 +419,7 @@ class decode_ctc():
         if len(paths) > 1:
             final_text,final_score = self.find_best_path(paths, lan, word_list)
             erro_record = self.count_error_characters(final_score)
-            return final_text, final_score,erro_record
+            # return final_text, final_score,erro_record
         elif len(paths) == 1:
             final_text,final_score = self.get_one_path_text( paths, lan, word_list)
             erro_record = self.count_error_characters(final_score)
@@ -469,7 +470,7 @@ if __name__ == '__main__':
             num += 1
             # print(num)
             preds = np.load(os.path.join(npyPath, npy))
-            # preds = np.load(os.path.join(npyPath, '1582801674.5322697.npy'))
+            # preds = np.load(os.path.join(npyPath, '1582801677.3857129.npy'))
             # preds = np.load('/fengjing/test_img/1.npy')1582785234.6443508.npy'
             # print(preds.shape)
             for i in range(len(preds)):
@@ -497,11 +498,11 @@ if __name__ == '__main__':
                 text_ctc,score,erro_record = DCTC.decode_ori(pred_ctc,char_set,'chn')
                 # print('不加后处理时间:',time.time()-c)
                 # print(text_ctc)
-                if text_ctc != text:
-                    print('转换前', text_ctc)
-                    print('转换后', text)
-                    print(npy)
-                    print(i)
+                # if text_ctc != text:
+                print('转换前', text_ctc)
+                print('转换后', text)
+                print(npy)
+                print(i)
                 # print('ctc_decode',)
                 d = time.time()
                 Time1 = Time1 + d - c
