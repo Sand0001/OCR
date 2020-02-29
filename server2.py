@@ -18,7 +18,7 @@ import tornado.web
 from tornado.options import define, options
 from tornado.options import options as ops
 from tornado import httpclient, gen, ioloop, queues
-
+import traceback
 import tensorflow as tf
 import keras.backend as K
 
@@ -101,13 +101,17 @@ class MainHandler(tornado.web.RequestHandler):
             img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
         else:
             pass
-
-        start = time.time()
-        results, img_shape = model(img, lan, angle, combine, lines ,just_detection)
-        end = time.time()
-        logging.info('ocr total time %s' % str(end-start))
-        #logging.info(results)
-        self.write(self.resp({'code':0, 'msg': '', 'result': results, 'shape': img_shape}))
+        try:
+            start = time.time()
+            results, img_shape = model(img, lan, angle, combine, lines ,just_detection)
+            end = time.time()
+            logging.info('ocr total time %s' % str(end-start))
+            #logging.info(results)
+            self.write(self.resp({'code':0, 'msg': '', 'result': results, 'shape': img_shape}))
+        except:
+            logging.info('error:{}'.format(straceback.format_exc()), exc_info=True)
+            self.write(self.resp({'code': -3, 'msg': '模型出错', 'result': ''}))
+            self.finish()
 
     def options(self):
         # pass

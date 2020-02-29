@@ -122,7 +122,7 @@ def draw_boxes(img, boxes):
     return img
 
 output_graph_def = tf.GraphDef()
-with open('psenet/psenet.pb','rb') as f :
+with open('psenet/models/finetune-checkbox-29.pb','rb') as f :
     output_graph_def.ParseFromString(f.read())
     _ = tf.import_graph_def(output_graph_def, name='')
 

@@ -6,6 +6,7 @@ import tensorflow as tf
 from PIL import Image, ImageOps,ImageDraw,ImageFont
 from char_rec.decode import decode_ctc
 from char_rec import shufflenet_res_crnn as densenet
+import traceback
 #from char_rec import dl_resnet_crnn_cudnnlstm as resnet
 
 decode_ctc = decode_ctc(eng_dict_path_file='./char_rec/corpus/eng_dict.pkl',
@@ -226,7 +227,8 @@ class predict():
                 try:
                    text, scores,erro_record = decode_ctc.decode_chn_eng(y_pred[i][width//4:slice_width//4],lan,char_set)
                 except:
-                   text, scores,erro_record = decode_ctc.decode_ori(y_pred[i][width//4:slice_width//4],lan,char_set)
+                    logging.info('error:{}'.format(traceback.format_exc()))
+                    text, scores,erro_record = decode_ctc.decode_ori(y_pred[i][width//4:slice_width//4],lan,char_set)
                 self.decode_time += time.time() - b
                 width += slice_width
                 imagename = {}
